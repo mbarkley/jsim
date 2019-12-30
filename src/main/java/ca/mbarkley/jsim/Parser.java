@@ -43,10 +43,11 @@ public class Parser {
         @Override
         public Expression visitExpression(JSimParser.ExpressionContext ctx) {
             final Expression left = visitSimpleExpression(ctx.simpleExpression());
-            if (ctx.NUMBER() != null) {
-                final Expression.Constant right = new Expression.Constant(parseInt(ctx.NUMBER().getText()));
+            if (ctx.expression() != null) {
+                final Expression right = visitExpression(ctx.expression());
                 final Expression.Operator sign;
-                switch (ctx.operator().getText()) {
+                final String operatorText = ctx.getChild(1).getText();
+                switch (operatorText) {
                     case "+":
                         sign = Expression.Operator.PLUS;
                         break;
@@ -54,13 +55,18 @@ public class Parser {
                         sign = Expression.Operator.MINUS;
                         break;
                     default:
-                        throw new RuntimeException(format("Unrecognized operator [%s]", ctx.operator().getText()));
+                        throw new RuntimeException(format("Unrecognized operator [%s]", operatorText));
                 }
 
                 return new Expression.BinaryOpExpression(left, sign, right);
             } else {
                 return left;
             }
+        }
+
+        @Override
+        public Expression visitConstant(JSimParser.ConstantContext ctx) {
+            return new Expression.Constant(parseInt(ctx.NUMBER().getText()));
         }
 
         @Override

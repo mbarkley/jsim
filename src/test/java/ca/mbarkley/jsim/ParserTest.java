@@ -78,4 +78,16 @@ public class ParserTest {
 
         Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(3, 8), Expression.Operator.MINUS, new Expression.Constant(1)), result);
     }
+
+    @Test
+    public void sumOfDicePools() {
+        final String expression = "3d8 + 2d6 + 1";
+
+        final Expression result = parser.parse(expression);
+
+        final Expression.HomogeneousDicePool d8s = new Expression.HomogeneousDicePool(3, 8);
+        final Expression subExpression = new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(2, 6), Expression.Operator.PLUS, new Expression.Constant(1));
+        final Expression.BinaryOpExpression expected = new Expression.BinaryOpExpression(d8s, Expression.Operator.PLUS, subExpression);
+        Assert.assertEquals(expected, result);
+    }
 }

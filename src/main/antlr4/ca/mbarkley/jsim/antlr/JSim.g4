@@ -15,11 +15,13 @@ MINUS : '-';
 
 jsim : expression EOF;
 
-expression : simpleExpression (operator NUMBER)?;
+expression : simpleExpression PLUS expression |
+             simpleExpression MINUS expression |
+             simpleExpression;
 
-operator : (PLUS | MINUS);
+simpleExpression : (constant | singleRoll | multiRoll);
 
-simpleExpression : (NUMBER | singleRoll | multiRoll);
+constant : NUMBER;
 
 singleRoll : D NUMBER;
 
