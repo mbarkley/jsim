@@ -3,22 +3,17 @@ package ca.mbarkley.jsim;
 import ca.mbarkley.jsim.antlr.JSimBaseVisitor;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
-import ca.mbarkley.jsim.prob.RandomDicePoolVariable;
-import ca.mbarkley.jsim.prob.RandomDieVariable;
+import ca.mbarkley.jsim.prob.Expression;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static java.lang.Integer.parseInt;
+import static java.lang.String.format;
 
 public class Parser {
-    public RandomDicePoolVariable parse(String expression) throws RecognitionException {
+    public Expression parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
@@ -29,52 +24,54 @@ public class Parser {
         return visitor.visit(ctx);
     }
 
-    private class Visitor extends JSimBaseVisitor<RandomDicePoolVariable> {
+    private class Visitor extends JSimBaseVisitor<Expression> {
         @Override
-        public RandomDicePoolVariable visitSingleRoll(JSimParser.SingleRollContext ctx) {
+        public Expression visitSingleRoll(JSimParser.SingleRollContext ctx) {
             final Token rawNumber = ctx.NUMBER().getSymbol();
-            final RandomDieVariable die = new RandomDieVariable(parseInt(rawNumber.getText()));
-            return new RandomDicePoolVariable(List.of(die), 0);
+            final int dieSides = parseInt(rawNumber.getText());
+            return new Expression.HomogeneousDicePool(1, dieSides);
         }
 
         @Override
-        public RandomDicePoolVariable visitMultiRoll(JSimParser.MultiRollContext ctx) {
+        public Expression visitMultiRoll(JSimParser.MultiRollContext ctx) {
             final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
             final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
 
-            final List<RandomDieVariable> dice = Stream.generate(() -> new RandomDieVariable(diceSides))
-                                                       .limit(diceNumber)
-                                                       .collect(Collectors.toList());
-
-            return new RandomDicePoolVariable(dice, 0);
+            return new Expression.HomogeneousDicePool(diceNumber, diceSides);
         }
 
         @Override
-        public RandomDicePoolVariable visitExpression(JSimParser.ExpressionContext ctx) {
-            final RandomDicePoolVariable firstDicePool = visitSimpleExpression(ctx.simpleExpression());
+        public Expression visitExpression(JSimParser.ExpressionContext ctx) {
+            final Expression left = visitSimpleExpression(ctx.simpleExpression());
             if (ctx.NUMBER() != null) {
-                // FIXME use visitor for typesafety
-                final int sign = ctx.operator().PLUS() != null ? 1 : -1;
-                final int otherMod = parseInt(ctx.NUMBER().getText()) * sign;
+                final Expression.Constant right = new Expression.Constant(parseInt(ctx.NUMBER().getText()));
+                final Expression.Operator sign;
+                switch (ctx.operator().getText()) {
+                    case "+":
+                        sign = Expression.Operator.PLUS;
+                        break;
+                    case "-":
+                        sign = Expression.Operator.MINUS;
+                        break;
+                    default:
+                        throw new RuntimeException(format("Unrecognized operator [%s]", ctx.operator().getText()));
+                }
 
-                return new RandomDicePoolVariable(firstDicePool.getDice(), firstDicePool.getModifier() + otherMod);
+                return new Expression.BinaryOpExpression(left, sign, right);
             } else {
-                return firstDicePool;
+                return left;
             }
         }
 
         @Override
-        protected RandomDicePoolVariable defaultResult() {
-            return new RandomDicePoolVariable(List.of(), 0);
-        }
-
-        @Override
-        protected RandomDicePoolVariable aggregateResult(RandomDicePoolVariable aggregate, RandomDicePoolVariable nextResult) {
-            var dice = new ArrayList<RandomDieVariable>(aggregate.getDice().size() + nextResult.getDice().size());
-            dice.addAll(aggregate.getDice());
-            dice.addAll(nextResult.getDice());
-
-            return new RandomDicePoolVariable(dice, aggregate.getModifier() + nextResult.getModifier());
+        protected Expression aggregateResult(Expression aggregate, Expression nextResult) {
+            if (aggregate == null) {
+                return nextResult;
+            } else if (nextResult == null) {
+                return aggregate;
+            } else {
+                throw new IllegalStateException(format("Cannot merge two non-null expressions [%s] and [%s] outside context of a binary expression", aggregate, nextResult));
+            }
         }
     }
 }

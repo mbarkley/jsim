@@ -1,11 +1,8 @@
 package ca.mbarkley.jsim;
 
-import ca.mbarkley.jsim.prob.RandomDicePoolVariable;
-import ca.mbarkley.jsim.prob.RandomDieVariable;
+import ca.mbarkley.jsim.prob.Expression;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 public class ParserTest {
     Parser parser = new Parser();
@@ -14,74 +11,71 @@ public class ParserTest {
     public void singleDieRoll() {
         final String expression = "d6";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(new RandomDieVariable(6)), 0), result);
+        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
     }
 
     @Test
     public void multipleDiceRoll() {
         final String expression = "3d8";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        final RandomDieVariable d8 = new RandomDieVariable(8);
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(d8, d8, d8), 0), result);
+        Assert.assertEquals(new Expression.HomogeneousDicePool(3, 8), result);
     }
 
     @Test
     public void leadingWhitespace() {
         final String expression = " d6";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(new RandomDieVariable(6)), 0), result);
+        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
     }
 
     @Test
     public void trailingWhitespace() {
         final String expression = "d6 ";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(new RandomDieVariable(6)), 0), result);
+        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
     }
 
     @Test
     public void singleRollPlusConstant() {
         final String expression = "d6 + 1";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(new RandomDieVariable(6)), 1), result);
+        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(1, 6), Expression.Operator.PLUS, new Expression.Constant(1)), result);
     }
 
     @Test
     public void singleRollMinusConstant() {
         final String expression = "d6 - 1";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(new RandomDieVariable(6)), -1), result);
+        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(1, 6), Expression.Operator.MINUS, new Expression.Constant(1)), result);
     }
 
     @Test
     public void multipleDiceRollPlusConstant() {
         final String expression = "3d8 + 1";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        final RandomDieVariable d8 = new RandomDieVariable(8);
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(d8, d8, d8), 1), result);
+        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(3, 8), Expression.Operator.PLUS, new Expression.Constant(1)), result);
     }
 
     @Test
     public void multipleDiceRollMinusConstant() {
         final String expression = "3d8 - 1";
 
-        final RandomDicePoolVariable result = parser.parse(expression);
+        final Expression result = parser.parse(expression);
 
-        final RandomDieVariable d8 = new RandomDieVariable(8);
-        Assert.assertEquals(new RandomDicePoolVariable(List.of(d8, d8, d8), -1), result);
+        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(3, 8), Expression.Operator.MINUS, new Expression.Constant(1)), result);
     }
 }
