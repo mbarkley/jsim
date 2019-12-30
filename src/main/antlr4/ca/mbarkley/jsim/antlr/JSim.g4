@@ -11,9 +11,19 @@ PLUS : '+';
 
 MINUS : '-';
 
+LT : '<';
+
+GT : '>';
+
+EQ : '=';
+
 // Grammar rules
 
-jsim : expression EOF;
+jsim : (question | expression) EOF;
+
+question : expression LT expression |
+           expression GT expression |
+           expression EQ expression;
 
 expression : simpleExpression PLUS expression |
              simpleExpression MINUS expression |

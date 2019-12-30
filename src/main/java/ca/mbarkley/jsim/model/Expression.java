@@ -1,10 +1,10 @@
-package ca.mbarkley.jsim.prob;
+package ca.mbarkley.jsim.model;
 
 import lombok.Value;
 
 import static java.lang.String.format;
 
-public abstract class Expression {
+public abstract class Expression extends Statement {
     private Expression() {}
 
     public abstract ExpressionType getType();
