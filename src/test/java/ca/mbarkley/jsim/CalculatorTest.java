@@ -45,7 +45,16 @@ public class CalculatorTest {
     }
 
     @Test
-    public void bigQuestion() {
+    public void bigAdditionQuestion() {
+        final Question question = parser.parseQuestion("10d20 + 10d20 > 200");
+
+        final double result = calculator.calculateProbability(question);
+
+        Assert.assertEquals(0.643, result, 0.001);
+    }
+
+    @Test
+    public void bigMultiRollQuestion() {
         final Question question = parser.parseQuestion("20d20 > 200");
 
         final double result = calculator.calculateProbability(question);
