@@ -16,7 +16,22 @@ public class Question extends Statement {
     }
 
     public enum Comparator {
-        LT("<"), GT(">"), EQ("=");
+        LT("<") {
+            @Override
+            public boolean evaluate(int left, int right) {
+                return left < right;
+            }
+        }, GT(">") {
+            @Override
+            public boolean evaluate(int left, int right) {
+                return left > right;
+            }
+        }, EQ("=") {
+            @Override
+            public boolean evaluate(int left, int right) {
+                return left == right;
+            }
+        };
 
         private final String symbol;
 
@@ -28,5 +43,7 @@ public class Question extends Statement {
         public String toString() {
             return symbol;
         }
+
+        public abstract boolean evaluate(int left, int right);
     }
 }
