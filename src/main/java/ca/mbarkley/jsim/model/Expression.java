@@ -32,7 +32,7 @@ public abstract class Expression extends Statement {
 
         @Override
         public Stream<Event<Integer>> events(int scale) {
-            return Stream.of(new Event<>(value, BigDecimal.ONE));
+            return Stream.of(new Event<>(value, 1.0));
         }
 
         @Override
@@ -61,9 +61,9 @@ public abstract class Expression extends Statement {
         }
 
         private Stream<Event<Integer>> singleDieEvents(int scale) {
-            return unfold(new Event(1, BigDecimal.ONE.divide(BigDecimal.valueOf(diceSides), scale, RoundingMode.HALF_EVEN)), e -> {
+            return unfold(new Event<>(1, 1.0 / ((double) diceSides)), e -> {
                 if (e.getValue() < diceSides) {
-                    return Optional.of(new Event(e.getValue() + 1, e.getProbability()));
+                    return Optional.of(new Event<>(e.getValue() + 1, e.getProbability()));
                 } else {
                     return Optional.empty();
                 }

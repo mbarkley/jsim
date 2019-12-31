@@ -28,7 +28,7 @@ public class Calculator {
                       .filter(Event::getValue)
                       .map(Event::getProbability)
                       .findFirst()
-                      .orElse(BigDecimal.ZERO)
+                      .orElse(0.0)
                       .doubleValue();
     }
 }
