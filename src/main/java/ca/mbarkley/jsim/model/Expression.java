@@ -73,18 +73,6 @@ public abstract class Expression extends Statement {
     }
 
     public enum ExpressionType {
-        CONSTANT {
-            public Constant convert(Expression expression) {
-                return (Constant) expression;
-            }
-        }, HOMOGENEOUS {
-            public HomogeneousDicePool convert(Expression expression) {
-                return (HomogeneousDicePool) expression;
-            }
-        }, BINARY {
-            public BinaryOpExpression convert(Expression expression) {
-                return (BinaryOpExpression) expression;
-            }
-        };
+        CONSTANT, HOMOGENEOUS, BINARY;
     }
 }

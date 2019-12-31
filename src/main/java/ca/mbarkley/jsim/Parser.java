@@ -16,6 +16,12 @@ import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 
 public class Parser {
+    public Question parseQuestion(String expression) throws RecognitionException {
+        final Statement parsed = parse(expression);
+
+        return (Question) parsed;
+    }
+
     public Statement parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
