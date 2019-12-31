@@ -8,10 +8,10 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.util.StreamUtils.product;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.reducing;
 
 @Value
@@ -32,10 +32,10 @@ public class Event<T> {
         return product(lefts,
                        rights,
                        (l, r) -> new Event<U>(combiner.apply(l.getValue(), r.getValue()), l.getProbability().multiply(r.getProbability())))
-                .collect(Collectors.groupingBy(Event::getValue, reducing(Event::merge)))
+                .collect(groupingBy(Event::getValue, reducing(BigDecimal.ZERO, Event::getProbability, BigDecimal::add)))
                 .entrySet()
                 .stream()
-                .flatMap(o -> o.getValue().stream());
+                .map(e -> new Event<>(e.getKey(), e.getValue()));
     }
 
     private static <T> Event<T> merge(Event<T> e1, Event<T> e2) {

@@ -46,7 +46,7 @@ public class CalculatorTest {
 
     @Test
     public void bigAdditionQuestion() {
-        final Question question = parser.parseQuestion("10d20 + 10d20 > 200");
+        final Question question = parser.parseQuestion("6d20 + 14d20 > 200");
 
         final double result = calculator.calculateProbability(question);
 

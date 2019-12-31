@@ -89,7 +89,7 @@ public abstract class Expression extends Statement {
 
         @Override
         public Stream<Event<Integer>> events(int scale) {
-            return productOfIndependent(List.of(left.events(scale), right.events(scale)), operator::apply);
+            return productOfIndependent(left.events(scale), right.events(scale), operator::apply);
         }
 
         @Override

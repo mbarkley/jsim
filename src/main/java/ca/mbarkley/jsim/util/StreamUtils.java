@@ -9,9 +9,8 @@ import static java.util.stream.Collectors.toList;
 public class StreamUtils {
     public static <T, U, V> Stream<V> product(Stream<T> left, Stream<U> right, BiFunction<T, U, V> combiner) {
         final List<U> savedRights = right.collect(toList());
-        return left.flatMap(l -> {
-            final Stream<T> repeatedLeft = Stream.generate(() -> l);
-            return com.codepoetics.protonpack.StreamUtils.zip(repeatedLeft, savedRights.stream(), combiner);
-        });
+        return left.flatMap(l -> savedRights.parallelStream()
+                                            .map(r -> combiner.apply(l, r)))
+                   .parallel();
     }
 }
