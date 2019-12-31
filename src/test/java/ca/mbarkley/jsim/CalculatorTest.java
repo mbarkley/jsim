@@ -2,7 +2,6 @@ package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.model.Question;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class CalculatorTest {
@@ -46,12 +45,11 @@ public class CalculatorTest {
     }
 
     @Test
-    @Ignore
     public void bigQuestion() {
-        final Question question = parser.parseQuestion("2d6 + d8 - d12 + 3d20 < 20 + 5d4");
+        final Question question = parser.parseQuestion("20d20 > 200");
 
         final double result = calculator.calculateProbability(question);
 
-        Assert.assertEquals(1.0, result, 0.00001);
+        Assert.assertEquals(0.643, result, 0.001);
     }
 }

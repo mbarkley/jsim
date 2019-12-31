@@ -21,9 +21,9 @@ public class Event<T> {
 
     public static <T> Stream<Event<T>> productOfIndependent(List<Stream<Event<T>>> streams, BinaryOperator<T> combiner) {
         final Optional<Stream<Event<T>>> product = streams.stream()
-                                                          .reduce((lefts, rights) -> product(lefts,
-                                                                                             rights,
-                                                                                             (l, r) -> new Event<>(combiner.apply(l.getValue(), r.getValue()), l.getProbability().multiply(r.getProbability()))));
+                                                          .reduce((lefts, rights) -> productOfIndependent(lefts,
+                                                                                                          rights,
+                                                                                                          combiner::apply));
 
         return product.stream().flatMap(Function.identity());
     }
