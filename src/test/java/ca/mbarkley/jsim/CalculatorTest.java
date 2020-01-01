@@ -116,4 +116,21 @@ public class CalculatorTest {
                           .hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(0.86652, offset))
                           .containsOnlyKeys(1, 2, 3, 4);
     }
+
+    @Test
+    public void lowDiceExpressionResults() {
+        final Expression expression = parser.parseExpression("7d4L1");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(0.00006, offset))
+                          .hasEntrySatisfying(3, prob -> assertThat(prob).isCloseTo(0.00775, offset))
+                          .hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(0.12567, offset))
+                          .hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(0.86652, offset))
+                          .containsOnlyKeys(1, 2, 3, 4);
+    }
 }

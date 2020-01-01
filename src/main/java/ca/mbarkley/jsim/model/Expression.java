@@ -71,7 +71,24 @@ public abstract class Expression extends Statement {
 
         @Override
         public Stream<Event<Integer>> events() {
-            return null;
+            final List<Stream<Event<List<Integer>>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(dicePool.getDiceSides())
+                                                                                                   .map(event -> new Event<>(List.of(event.getValue()), event.getProbability())))
+                                                                              .limit(dicePool.getNumberOfDice())
+                                                                              .collect(toList());
+
+            return productOfIndependent(singleDieStreams, this::updateValues)
+                    .map(event -> new Event<>(event.getValue().stream().mapToInt(n -> n).sum(), event.getProbability()))
+                    .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
+                    .entrySet()
+                    .stream()
+                    .map(entry -> new Event<>(entry.getKey(), entry.getValue()));
+        }
+
+        private List<Integer> updateValues(List<Integer> v1, List<Integer> v2) {
+            return Stream.concat(v1.stream(), v2.stream())
+                         .sorted(comparingInt(n -> (int) n))
+                         .limit(numberOfDice)
+                         .collect(toList());
         }
 
         @Override

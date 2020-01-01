@@ -37,6 +37,15 @@ public class ParserTest {
     }
 
     @Test
+    public void lowDieRoll() {
+        final String expression = "3d6L2";
+
+        final Statement result = parser.parse(expression);
+
+        Assert.assertEquals(new Expression.LowDice(new Expression.HomogeneousDicePool(3, 6), 2), result);
+    }
+
+    @Test
     public void leadingWhitespace() {
         final String expression = " d6";
 

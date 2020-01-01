@@ -113,6 +113,16 @@ public class Parser {
         }
 
         @Override
+        public Expression visitLowRoll(JSimParser.LowRollContext ctx) {
+            final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
+            final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
+            final int lowDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
+            final Expression.HomogeneousDicePool dicePool = new Expression.HomogeneousDicePool(diceNumber, diceSides);
+
+            return new Expression.LowDice(dicePool, lowDice);
+        }
+
+        @Override
         public Expression visitExpression(JSimParser.ExpressionContext ctx) {
             final Expression left = visitSimpleExpression(ctx.simpleExpression());
             if (ctx.expression() != null) {
