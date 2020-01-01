@@ -152,17 +152,8 @@ public class Parser {
         private Operator getOperator(JSimParser.ExpressionContext ctx) {
             final Operator sign;
             final String operatorText = ctx.getChild(1).getText();
-            switch (operatorText) {
-                case "+":
-                    sign = Operator.PLUS;
-                    break;
-                case "-":
-                    sign = Operator.MINUS;
-                    break;
-                default:
-                    throw new RuntimeException(format("Unrecognized operator [%s]", operatorText));
-            }
-            return sign;
+            return Operator.lookup(operatorText)
+                           .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));
         }
 
         @Override

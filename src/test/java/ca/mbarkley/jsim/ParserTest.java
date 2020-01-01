@@ -107,6 +107,24 @@ public class ParserTest {
     }
 
     @Test
+    public void multipleDiceRollTimesConstant() {
+        final String expression = "3d8 * 2";
+
+        final Statement result = parser.parse(expression);
+
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant(2)), result);
+    }
+
+    @Test
+    public void multipleDiceRollDivideConstant() {
+        final String expression = "3d8 / 2";
+
+        final Statement result = parser.parse(expression);
+
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant(2)), result);
+    }
+
+    @Test
     public void sumOfDicePools() {
         final String expression = "3d8 + 2d6 + 1";
 

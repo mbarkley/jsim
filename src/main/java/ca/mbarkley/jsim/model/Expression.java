@@ -4,6 +4,7 @@ import ca.mbarkley.jsim.prob.Event;
 import lombok.Value;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
@@ -135,12 +136,25 @@ public abstract class Expression extends Statement {
     }
 
     public enum Operator {
+        DIVIDE("/", 2) {
+            @Override
+            public int apply(int left, int right) {
+                return left / right;
+            }
+        },
+        TIMES("*", 1) {
+            @Override
+            public int apply(int left, int right) {
+                return left * right;
+            }
+        },
         PLUS("+", 0) {
             @Override
             public int apply(int left, int right) {
                 return left + right;
             }
-        }, MINUS("-", 0) {
+        },
+        MINUS("-", 0) {
             @Override
             public int apply(int left, int right) {
                 return left - right;
@@ -165,6 +179,16 @@ public abstract class Expression extends Statement {
         public boolean hasEqualOrGreaterPrecedent(Operator subOperator) {
             // For equal precedent, operators are applied left-to-right
             return precedent >= subOperator.precedent;
+        }
+
+        public static Optional<Operator> lookup(String symbol) {
+            for (Operator op : values()) {
+                if (op.symbol.equals(symbol)) {
+                    return Optional.of(op);
+                }
+            }
+
+            return Optional.empty();
         }
     }
 }

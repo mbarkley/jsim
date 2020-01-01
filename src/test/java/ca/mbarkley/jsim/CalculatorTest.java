@@ -36,6 +36,15 @@ public class CalculatorTest {
     }
 
     @Test
+    public void multipliedRollsGreaterThanConstant() {
+        final Question question = parser.parseQuestion("d4 * d4 > 8");
+
+        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+
+        Assert.assertEquals(0.250, result.get(true).getProbability(), 0.001);
+    }
+
+    @Test
     public void complexRollLessThanComplexRoll() {
         final Question question = parser.parseQuestion("2d6 + 1 < 2d8 - 4");
 
@@ -146,5 +155,47 @@ public class CalculatorTest {
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
                           .containsOnlyKeys(2);
+    }
+
+    @Test
+    public void orderOfOperationsWithMultiplication() {
+        final Expression expression = parser.parseExpression("2 + 1 * 3");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(5, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(5);
+    }
+
+    @Test
+    public void orderOfOperationsWithDivision() {
+        final Expression expression = parser.parseExpression("2 + 1 / 3");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(2);
+    }
+
+    @Test
+    public void orderOfOperationsWithDivisionAndMultiplication() {
+        final Expression expression = parser.parseExpression("3 * 1 / 3");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(0, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(0);
     }
 }

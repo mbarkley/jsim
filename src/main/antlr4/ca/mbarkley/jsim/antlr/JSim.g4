@@ -11,6 +11,10 @@ H : ('h' | 'H');
 
 L : ('l' | 'L');
 
+TIMES : '*';
+
+DIVIDE : '/';
+
 PLUS : '+';
 
 MINUS : '-';
@@ -29,7 +33,9 @@ question : expression LT expression |
            expression GT expression |
            expression EQ expression;
 
-expression : atom PLUS expression |
+expression : atom TIMES expression |
+             atom DIVIDE expression |
+             atom PLUS expression |
              atom MINUS expression |
              atom;
 
