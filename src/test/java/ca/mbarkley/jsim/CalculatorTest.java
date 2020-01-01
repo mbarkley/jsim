@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Offset.offset;
 
 public class CalculatorTest {
-    Calculator calculator = new Calculator(1000);
+    Calculator calculator = new Calculator();
     Parser parser = new Parser();
 
     @Test

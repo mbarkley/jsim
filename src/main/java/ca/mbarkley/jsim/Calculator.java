@@ -16,11 +16,9 @@ import static java.util.stream.Collectors.toMap;
 @RequiredArgsConstructor
 @Builder
 public class Calculator {
-    private final int scale;
-
     public Map<Boolean, Event<Boolean>> calculateResult(Question question) {
-        final Stream<Event<Integer>> left = question.getLeft().events(scale);
-        final Stream<Event<Integer>> right = question.getRight().events(scale);
+        final Stream<Event<Integer>> left = question.getLeft().events();
+        final Stream<Event<Integer>> right = question.getRight().events();
 
         return productOfIndependent(left,
                                     right,
@@ -29,7 +27,7 @@ public class Calculator {
     }
 
     public Map<Integer, Event<Integer>> calculateResult(Expression expression) {
-        return expression.events(scale)
+        return expression.events()
                          .collect(toMap(Event::getValue, identity()));
     }
 }

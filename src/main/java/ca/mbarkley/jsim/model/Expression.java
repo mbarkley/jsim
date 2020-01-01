@@ -3,8 +3,6 @@ package ca.mbarkley.jsim.model;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.Value;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -19,7 +17,7 @@ public abstract class Expression extends Statement {
 
     public abstract ExpressionType getType();
 
-    public abstract Stream<Event<Integer>> events(int scale);
+    public abstract Stream<Event<Integer>> events();
 
     @Value
     public static class Constant extends Expression {
@@ -31,7 +29,7 @@ public abstract class Expression extends Statement {
         }
 
         @Override
-        public Stream<Event<Integer>> events(int scale) {
+        public Stream<Event<Integer>> events() {
             return Stream.of(new Event<>(value, 1.0));
         }
 
@@ -52,15 +50,15 @@ public abstract class Expression extends Statement {
         }
 
         @Override
-        public Stream<Event<Integer>> events(int scale) {
-            final List<Stream<Event<Integer>>> singleDieStreams = Stream.generate(() -> singleDieEvents(scale))
+        public Stream<Event<Integer>> events() {
+            final List<Stream<Event<Integer>>> singleDieStreams = Stream.generate(this::singleDieEvents)
                                                                         .limit(numberOfDice)
                                                                         .collect(toList());
 
             return productOfIndependent(singleDieStreams, Integer::sum);
         }
 
-        private Stream<Event<Integer>> singleDieEvents(int scale) {
+        private Stream<Event<Integer>> singleDieEvents() {
             return unfold(new Event<>(1, 1.0 / ((double) diceSides)), e -> {
                 if (e.getValue() < diceSides) {
                     return Optional.of(new Event<>(e.getValue() + 1, e.getProbability()));
@@ -88,8 +86,8 @@ public abstract class Expression extends Statement {
         }
 
         @Override
-        public Stream<Event<Integer>> events(int scale) {
-            return productOfIndependent(left.events(scale), right.events(scale), operator::apply);
+        public Stream<Event<Integer>> events() {
+            return productOfIndependent(left.events(), right.events(), operator::apply);
         }
 
         @Override
