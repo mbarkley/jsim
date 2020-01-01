@@ -5,6 +5,7 @@ import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
+import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.Expression.Operator;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
@@ -126,31 +127,47 @@ public class Parser {
 
         @Override
         public Expression visitExpression(JSimParser.ExpressionContext ctx) {
-            final Expression left = visitAtom(ctx.atom());
             if (ctx.expression() != null) {
-                final Expression subExpression = visitExpression(ctx.expression());
-                final Operator sign = getOperator(ctx);
-                if (subExpression instanceof BinaryOpExpression) {
-                    final Expression subLeft = ((BinaryOpExpression) subExpression).getLeft();
-                    final Expression subRight = ((BinaryOpExpression) subExpression).getRight();
-                    final Operator subOperator = ((BinaryOpExpression) subExpression).getOperator();
-                    if (sign.hasEqualOrGreaterPrecedent(subOperator)) {
-                        final BinaryOpExpression rotatedLeft = new BinaryOpExpression(left, sign, subLeft);
+                return visitBinaryExpression(ctx);
+            } else if (ctx.term() != null && ctx.expression() == null) {
+                return visitTerm(ctx.term());
+            } else {
+                throw new IllegalStateException();
+            }
+        }
 
-                        return new BinaryOpExpression(rotatedLeft, subOperator, subRight);
-                    } else {
-                        return new BinaryOpExpression(left, sign, subExpression);
-                    }
+        @Override
+        public Expression visitTerm(JSimParser.TermContext ctx) {
+            if (ctx.expression() != null) {
+                return new Bracketed(visitExpression(ctx.expression()));
+            } else if (ctx.atom() != null) {
+                return visitAtom(ctx.atom());
+            } else {
+                throw new IllegalStateException();
+            }
+        }
+
+        private Expression visitBinaryExpression(JSimParser.ExpressionContext ctx) {
+            final Expression left = visitTerm(ctx.term());
+            final Expression subExpression = visitExpression(ctx.expression());
+            final Operator sign = getOperator(ctx);
+            if (subExpression instanceof BinaryOpExpression) {
+                final Expression subLeft = ((BinaryOpExpression) subExpression).getLeft();
+                final Expression subRight = ((BinaryOpExpression) subExpression).getRight();
+                final Operator subOperator = ((BinaryOpExpression) subExpression).getOperator();
+                if (sign.hasEqualOrGreaterPrecedent(subOperator)) {
+                    final BinaryOpExpression rotatedLeft = new BinaryOpExpression(left, sign, subLeft);
+
+                    return new BinaryOpExpression(rotatedLeft, subOperator, subRight);
                 } else {
                     return new BinaryOpExpression(left, sign, subExpression);
                 }
             } else {
-                return left;
+                return new BinaryOpExpression(left, sign, subExpression);
             }
         }
 
         private Operator getOperator(JSimParser.ExpressionContext ctx) {
-            final Operator sign;
             final String operatorText = ctx.getChild(1).getText();
             return Operator.lookup(operatorText)
                            .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));

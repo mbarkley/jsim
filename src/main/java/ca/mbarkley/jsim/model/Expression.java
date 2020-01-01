@@ -33,6 +33,21 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    public static class Bracketed extends Expression {
+        Expression subExpression;
+
+        @Override
+        public Stream<Event<Integer>> events() {
+            return subExpression.events();
+        }
+
+        @Override
+        public String toString() {
+            return format("(%s)", subExpression);
+        }
+    }
+
+    @Value
     public static class HighDice extends Expression {
         HomogeneousDicePool dicePool;
         int numberOfDice;

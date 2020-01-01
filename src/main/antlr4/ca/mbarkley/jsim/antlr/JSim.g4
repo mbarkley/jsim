@@ -25,6 +25,10 @@ GT : '>';
 
 EQ : '=';
 
+LB : '(';
+
+RB: ')';
+
 // Grammar rules
 
 jsim : (question | expression) EOF;
@@ -33,13 +37,16 @@ question : expression LT expression |
            expression GT expression |
            expression EQ expression;
 
-expression : atom TIMES expression |
-             atom DIVIDE expression |
-             atom PLUS expression |
-             atom MINUS expression |
-             atom;
+expression : term TIMES expression |
+             term DIVIDE expression |
+             term PLUS expression |
+             term MINUS expression |
+             term;
 
-atom : (constant | singleRoll | multiRoll | highRoll | lowRoll);
+term : LB expression RB |
+       atom;
+
+atom : constant | singleRoll | multiRoll | highRoll | lowRoll;
 
 constant : NUMBER;
 

@@ -1,16 +1,14 @@
 package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.model.Expression;
-import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
-import ca.mbarkley.jsim.model.Expression.Constant;
-import ca.mbarkley.jsim.model.Expression.HomogeneousDicePool;
-import ca.mbarkley.jsim.model.Expression.Operator;
+import ca.mbarkley.jsim.model.Expression.*;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
 import org.junit.Assert;
 import org.junit.Test;
 
 import static ca.mbarkley.jsim.model.Expression.Operator.PLUS;
+import static ca.mbarkley.jsim.model.Expression.Operator.TIMES;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ParserTest {
@@ -185,5 +183,32 @@ public class ParserTest {
                 new Constant(1)
         );
         assertThat(result).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void bracketed() {
+        final String expression = "2 * (2d6 + 1)";
+
+        final Statement result = parser.parse(expression);
+
+        final Expression expected = new BinaryOpExpression(
+                new Constant(2),
+                TIMES,
+                new Bracketed(new BinaryOpExpression(
+                        new HomogeneousDicePool(2, 6),
+                        PLUS,
+                        new Constant(1)
+                ))
+        );
+        assertThat(result).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void complexConstantExpression() {
+        final String expression = "3 * (3 + 1) / 4 * 10";
+
+        final Statement result = parser.parse(expression);
+
+        assertThat(result).hasToString(expression);
     }
 }

@@ -198,4 +198,18 @@ public class CalculatorTest {
         assertThat(result).hasEntrySatisfying(0, prob -> assertThat(prob).isCloseTo(1.0, offset))
                           .containsOnlyKeys(0);
     }
+
+    @Test
+    public void fullBedmas() {
+        final Expression expression = parser.parseExpression("3 * (3 + 1) / 4 * 10");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(30, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(30);
+    }
 }
