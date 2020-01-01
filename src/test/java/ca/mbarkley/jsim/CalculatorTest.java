@@ -89,7 +89,7 @@ public class CalculatorTest {
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
 
-        final Offset<Double> offset = offset(0.01);
+        final Offset<Double> offset = offset(0.0001);
         assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0 / 16.0, offset))
                           .hasEntrySatisfying(3, prob -> assertThat(prob).isCloseTo(2.0 / 16.0, offset))
                           .hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(3.0 / 16.0, offset))
@@ -98,5 +98,22 @@ public class CalculatorTest {
                           .hasEntrySatisfying(7, prob -> assertThat(prob).isCloseTo(2.0 / 16.0, offset))
                           .hasEntrySatisfying(8, prob -> assertThat(prob).isCloseTo(1.0 / 16.0, offset))
                           .containsOnlyKeys(2, 3, 4, 5, 6, 7, 8);
+    }
+
+    @Test
+    public void highDiceExpressionResults() {
+        final Expression expression = parser.parseExpression("7d4H1");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(0.00006, offset))
+                          .hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(0.00775, offset))
+                          .hasEntrySatisfying(3, prob -> assertThat(prob).isCloseTo(0.12567, offset))
+                          .hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(0.86652, offset))
+                          .containsOnlyKeys(1, 2, 3, 4);
     }
 }

@@ -10,6 +10,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.util.StreamUtils.product;
+import static com.codepoetics.protonpack.StreamUtils.unfold;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.reducing;
 
@@ -39,5 +40,15 @@ public class Event<T> {
 
     private static <T> Event<T> merge(Event<T> e1, Event<T> e2) {
         return new Event<>(e1.value, e1.getProbability() + e2.getProbability());
+    }
+
+    public static Stream<Event<Integer>> singleDieEvents(int diceSides) {
+        return unfold(new Event<>(1, 1.0 / ((double) diceSides)), e -> {
+            if (e.getValue() < diceSides) {
+                return Optional.of(new Event<>(e.getValue() + 1, e.getProbability()));
+            } else {
+                return Optional.empty();
+            }
+        });
     }
 }

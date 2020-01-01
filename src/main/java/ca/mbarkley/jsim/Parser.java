@@ -86,7 +86,7 @@ public class Parser {
         }
     }
 
-    private class ExpressionVisitor extends JSimBaseVisitor<Expression> {
+    private static class ExpressionVisitor extends JSimBaseVisitor<Expression> {
         @Override
         public Expression visitSingleRoll(JSimParser.SingleRollContext ctx) {
             final Token rawNumber = ctx.NUMBER().getSymbol();
@@ -100,6 +100,16 @@ public class Parser {
             final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
 
             return new Expression.HomogeneousDicePool(diceNumber, diceSides);
+        }
+
+        @Override
+        public Expression visitHighRoll(JSimParser.HighRollContext ctx) {
+            final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
+            final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
+            final int highDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
+            final Expression.HomogeneousDicePool dicePool = new Expression.HomogeneousDicePool(diceNumber, diceSides);
+
+            return new Expression.HighDice(dicePool, highDice);
         }
 
         @Override

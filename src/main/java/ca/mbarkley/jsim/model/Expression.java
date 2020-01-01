@@ -4,29 +4,21 @@ import ca.mbarkley.jsim.prob.Event;
 import lombok.Value;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
-import static com.codepoetics.protonpack.StreamUtils.unfold;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
+import static java.util.Comparator.comparingInt;
+import static java.util.stream.Collectors.*;
 
 public abstract class Expression extends Statement {
     private Expression() {}
-
-    public abstract ExpressionType getType();
 
     public abstract Stream<Event<Integer>> events();
 
     @Value
     public static class Constant extends Expression {
         int value;
-
-        @Override
-        public ExpressionType getType() {
-            return ExpressionType.CONSTANT;
-        }
 
         @Override
         public Stream<Event<Integer>> events() {
@@ -40,32 +32,66 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    public static class HighDice extends Expression {
+        HomogeneousDicePool dicePool;
+        int numberOfDice;
+
+        @Override
+        public Stream<Event<Integer>> events() {
+            final List<Stream<Event<List<Integer>>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(dicePool.getDiceSides())
+                                                                                                   .map(event -> new Event<>(List.of(event.getValue()), event.getProbability())))
+                                                                              .limit(dicePool.getNumberOfDice())
+                                                                              .collect(toList());
+
+            return productOfIndependent(singleDieStreams, this::updateValues)
+                    .map(event -> new Event<>(event.getValue().stream().mapToInt(n -> n).sum(), event.getProbability()))
+                    .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
+                    .entrySet()
+                    .stream()
+                    .map(entry -> new Event<>(entry.getKey(), entry.getValue()));
+        }
+
+        private List<Integer> updateValues(List<Integer> v1, List<Integer> v2) {
+            return Stream.concat(v1.stream(), v2.stream())
+                         .sorted(comparingInt(n -> (int) n).reversed())
+                         .limit(numberOfDice)
+                         .collect(toList());
+        }
+
+        @Override
+        public String toString() {
+            return format("%sH%d", dicePool, numberOfDice);
+        }
+    }
+
+    @Value
+    public static class LowDice extends Expression {
+        HomogeneousDicePool dicePool;
+        int numberOfDice;
+
+        @Override
+        public Stream<Event<Integer>> events() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return format("%sL%d", dicePool, numberOfDice);
+        }
+    }
+
+    @Value
     public static class HomogeneousDicePool extends Expression {
         int numberOfDice;
         int diceSides;
 
         @Override
-        public ExpressionType getType() {
-            return ExpressionType.HOMOGENEOUS;
-        }
-
-        @Override
         public Stream<Event<Integer>> events() {
-            final List<Stream<Event<Integer>>> singleDieStreams = Stream.generate(this::singleDieEvents)
+            final List<Stream<Event<Integer>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(diceSides))
                                                                         .limit(numberOfDice)
                                                                         .collect(toList());
 
             return productOfIndependent(singleDieStreams, Integer::sum);
-        }
-
-        private Stream<Event<Integer>> singleDieEvents() {
-            return unfold(new Event<>(1, 1.0 / ((double) diceSides)), e -> {
-                if (e.getValue() < diceSides) {
-                    return Optional.of(new Event<>(e.getValue() + 1, e.getProbability()));
-                } else {
-                    return Optional.empty();
-                }
-            });
         }
 
         @Override
@@ -79,11 +105,6 @@ public abstract class Expression extends Statement {
         Expression left;
         Operator operator;
         Expression right;
-
-        @Override
-        public ExpressionType getType() {
-            return ExpressionType.BINARY;
-        }
 
         @Override
         public Stream<Event<Integer>> events() {
@@ -121,9 +142,5 @@ public abstract class Expression extends Statement {
         }
 
         public abstract int apply(int left, int right);
-    }
-
-    public enum ExpressionType {
-        CONSTANT, HOMOGENEOUS, BINARY;
     }
 }

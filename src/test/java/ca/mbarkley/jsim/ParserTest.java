@@ -28,6 +28,15 @@ public class ParserTest {
     }
 
     @Test
+    public void highDieRoll() {
+        final String expression = "3d6H2";
+
+        final Statement result = parser.parse(expression);
+
+        Assert.assertEquals(new Expression.HighDice(new Expression.HomogeneousDicePool(3, 6), 2), result);
+    }
+
+    @Test
     public void leadingWhitespace() {
         final String expression = " d6";
 
