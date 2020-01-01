@@ -22,6 +22,12 @@ public class Parser {
         return (Question) parsed;
     }
 
+    public Expression parseExpression(String expression) throws RecognitionException {
+        final Statement parsed = parse(expression);
+
+        return (Expression) parsed;
+    }
+
     public Statement parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);

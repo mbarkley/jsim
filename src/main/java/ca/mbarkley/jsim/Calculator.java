@@ -1,10 +1,10 @@
 package ca.mbarkley.jsim;
 
+import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -26,5 +26,10 @@ public class Calculator {
                                     right,
                                     (l, r) -> question.getComparator().evaluate(l, r))
                 .collect(toMap(Event::getValue, identity()));
+    }
+
+    public Map<Integer, Event<Integer>> calculateResult(Expression expression) {
+        return expression.events(scale)
+                         .collect(toMap(Event::getValue, identity()));
     }
 }
