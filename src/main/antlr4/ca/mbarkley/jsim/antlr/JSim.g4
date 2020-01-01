@@ -29,11 +29,11 @@ question : expression LT expression |
            expression GT expression |
            expression EQ expression;
 
-expression : simpleExpression PLUS expression |
-             simpleExpression MINUS expression |
-             simpleExpression;
+expression : atom PLUS expression |
+             atom MINUS expression |
+             atom;
 
-simpleExpression : (constant | singleRoll | multiRoll | highRoll | lowRoll);
+atom : (constant | singleRoll | multiRoll | highRoll | lowRoll);
 
 constant : NUMBER;
 

@@ -133,4 +133,18 @@ public class CalculatorTest {
                           .hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(0.86652, offset))
                           .containsOnlyKeys(1, 2, 3, 4);
     }
+
+    @Test
+    public void orderOfOperationsWithSubtraction() {
+        final Expression expression = parser.parseExpression("2 - 1 + 1");
+
+        final Map<Integer, Double> result = calculator.calculateResult(expression)
+                                                      .entrySet()
+                                                      .stream()
+                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(2);
+    }
 }

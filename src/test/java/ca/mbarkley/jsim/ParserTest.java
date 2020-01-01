@@ -1,10 +1,17 @@
 package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.model.Expression;
+import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
+import ca.mbarkley.jsim.model.Expression.Constant;
+import ca.mbarkley.jsim.model.Expression.HomogeneousDicePool;
+import ca.mbarkley.jsim.model.Expression.Operator;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static ca.mbarkley.jsim.model.Expression.Operator.PLUS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ParserTest {
     Parser parser = new Parser();
@@ -15,7 +22,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
+        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
 
     @Test
@@ -24,7 +31,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HomogeneousDicePool(3, 8), result);
+        Assert.assertEquals(new HomogeneousDicePool(3, 8), result);
     }
 
     @Test
@@ -33,7 +40,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HighDice(new Expression.HomogeneousDicePool(3, 6), 2), result);
+        Assert.assertEquals(new Expression.HighDice(new HomogeneousDicePool(3, 6), 2), result);
     }
 
     @Test
@@ -42,7 +49,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.LowDice(new Expression.HomogeneousDicePool(3, 6), 2), result);
+        Assert.assertEquals(new Expression.LowDice(new HomogeneousDicePool(3, 6), 2), result);
     }
 
     @Test
@@ -51,7 +58,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
+        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
 
     @Test
@@ -60,7 +67,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HomogeneousDicePool(1, 6), result);
+        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
 
     @Test
@@ -69,7 +76,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(1, 6), Expression.Operator.PLUS, new Expression.Constant(1)), result);
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant(1)), result);
     }
 
     @Test
@@ -78,7 +85,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(1, 6), Expression.Operator.MINUS, new Expression.Constant(1)), result);
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant(1)), result);
     }
 
     @Test
@@ -87,7 +94,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(3, 8), Expression.Operator.PLUS, new Expression.Constant(1)), result);
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant(1)), result);
     }
 
     @Test
@@ -96,7 +103,7 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(3, 8), Expression.Operator.MINUS, new Expression.Constant(1)), result);
+        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant(1)), result);
     }
 
     @Test
@@ -105,10 +112,11 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        final Expression.HomogeneousDicePool d8s = new Expression.HomogeneousDicePool(3, 8);
-        final Expression subExpression = new Expression.BinaryOpExpression(new Expression.HomogeneousDicePool(2, 6), Expression.Operator.PLUS, new Expression.Constant(1));
-        final Expression.BinaryOpExpression expected = new Expression.BinaryOpExpression(d8s, Expression.Operator.PLUS, subExpression);
-        Assert.assertEquals(expected, result);
+        final BinaryOpExpression expected = new BinaryOpExpression(
+                new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
+                PLUS,
+                new Constant(1));
+        assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
     @Test
@@ -117,10 +125,10 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        final Expression left = new Expression.HomogeneousDicePool(3, 8);
-        final Expression right = new Expression.HomogeneousDicePool(2, 6);
+        final Expression left = new HomogeneousDicePool(3, 8);
+        final Expression right = new HomogeneousDicePool(2, 6);
         final Question expected = new Question(left, Question.Comparator.LT, right);
-        Assert.assertEquals(expected, result);
+        assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
     @Test
@@ -129,10 +137,10 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        final Expression left = new Expression.HomogeneousDicePool(3, 8);
-        final Expression right = new Expression.HomogeneousDicePool(2, 6);
+        final Expression left = new HomogeneousDicePool(3, 8);
+        final Expression right = new HomogeneousDicePool(2, 6);
         final Question expected = new Question(left, Question.Comparator.GT, right);
-        Assert.assertEquals(expected, result);
+        assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
     @Test
@@ -141,9 +149,23 @@ public class ParserTest {
 
         final Statement result = parser.parse(expression);
 
-        final Expression left = new Expression.HomogeneousDicePool(3, 8);
-        final Expression right = new Expression.HomogeneousDicePool(2, 6);
+        final Expression left = new HomogeneousDicePool(3, 8);
+        final Expression right = new HomogeneousDicePool(2, 6);
         final Question expected = new Question(left, Question.Comparator.EQ, right);
-        Assert.assertEquals(expected, result);
+        assertThat(result).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void subtractionThenAddition() {
+        final String expression = "2 - 1 + 1";
+
+        final Statement result = parser.parse(expression);
+
+        final Expression expected = new BinaryOpExpression(
+                new BinaryOpExpression(new Constant(2), Operator.MINUS, new Constant(1)),
+                PLUS,
+                new Constant(1)
+        );
+        assertThat(result).isEqualToComparingFieldByField(expected);
     }
 }

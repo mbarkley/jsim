@@ -135,12 +135,12 @@ public abstract class Expression extends Statement {
     }
 
     public enum Operator {
-        PLUS("+") {
+        PLUS("+", 0) {
             @Override
             public int apply(int left, int right) {
                 return left + right;
             }
-        }, MINUS("-") {
+        }, MINUS("-", 0) {
             @Override
             public int apply(int left, int right) {
                 return left - right;
@@ -148,9 +148,11 @@ public abstract class Expression extends Statement {
         };
 
         private final String symbol;
+        private final int precedent;
 
-        Operator(String symbol) {
+        Operator(String symbol, int precedent) {
             this.symbol = symbol;
+            this.precedent = precedent;
         }
 
         @Override
@@ -159,5 +161,10 @@ public abstract class Expression extends Statement {
         }
 
         public abstract int apply(int left, int right);
+
+        public boolean hasEqualOrGreaterPrecedent(Operator subOperator) {
+            // For equal precedent, operators are applied left-to-right
+            return precedent >= subOperator.precedent;
+        }
     }
 }

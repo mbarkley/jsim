@@ -4,6 +4,8 @@ import ca.mbarkley.jsim.antlr.JSimBaseVisitor;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.Expression;
+import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
+import ca.mbarkley.jsim.model.Expression.Operator;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
 import lombok.RequiredArgsConstructor;
@@ -124,26 +126,43 @@ public class Parser {
 
         @Override
         public Expression visitExpression(JSimParser.ExpressionContext ctx) {
-            final Expression left = visitSimpleExpression(ctx.simpleExpression());
+            final Expression left = visitAtom(ctx.atom());
             if (ctx.expression() != null) {
-                final Expression right = visitExpression(ctx.expression());
-                final Expression.Operator sign;
-                final String operatorText = ctx.getChild(1).getText();
-                switch (operatorText) {
-                    case "+":
-                        sign = Expression.Operator.PLUS;
-                        break;
-                    case "-":
-                        sign = Expression.Operator.MINUS;
-                        break;
-                    default:
-                        throw new RuntimeException(format("Unrecognized operator [%s]", operatorText));
-                }
+                final Expression subExpression = visitExpression(ctx.expression());
+                final Operator sign = getOperator(ctx);
+                if (subExpression instanceof BinaryOpExpression) {
+                    final Expression subLeft = ((BinaryOpExpression) subExpression).getLeft();
+                    final Expression subRight = ((BinaryOpExpression) subExpression).getRight();
+                    final Operator subOperator = ((BinaryOpExpression) subExpression).getOperator();
+                    if (sign.hasEqualOrGreaterPrecedent(subOperator)) {
+                        final BinaryOpExpression rotatedLeft = new BinaryOpExpression(left, sign, subLeft);
 
-                return new Expression.BinaryOpExpression(left, sign, right);
+                        return new BinaryOpExpression(rotatedLeft, subOperator, subRight);
+                    } else {
+                        return new BinaryOpExpression(left, sign, subExpression);
+                    }
+                } else {
+                    return new BinaryOpExpression(left, sign, subExpression);
+                }
             } else {
                 return left;
             }
+        }
+
+        private Operator getOperator(JSimParser.ExpressionContext ctx) {
+            final Operator sign;
+            final String operatorText = ctx.getChild(1).getText();
+            switch (operatorText) {
+                case "+":
+                    sign = Operator.PLUS;
+                    break;
+                case "-":
+                    sign = Operator.MINUS;
+                    break;
+                default:
+                    throw new RuntimeException(format("Unrecognized operator [%s]", operatorText));
+            }
+            return sign;
         }
 
         @Override
