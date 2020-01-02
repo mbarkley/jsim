@@ -1,15 +1,20 @@
 package ca.mbarkley.jsim;
 
+import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.*;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
 import static ca.mbarkley.jsim.model.Expression.Operator.PLUS;
 import static ca.mbarkley.jsim.model.Expression.Operator.TIMES;
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 public class ParserTest {
     Parser parser = new Parser();
@@ -210,5 +215,139 @@ public class ParserTest {
         final Statement result = parser.parse(expression);
 
         assertThat(result).hasToString(expression);
+    }
+
+    @Test
+    public void invalidQuestionCausesExceptionWithCharacterInfo() {
+        final String expression = "2d6 > ";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(6);
+        }
+    }
+
+    @Test
+    public void invalidExpressionInQuestionCausesExceptionWithCharacterInfo() {
+        final String expression = "2d6 > 3 * ";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(10);
+        }
+    }
+
+    @Test
+    public void invalidSubExpressionCausesExceptionWithCharacterInfo() {
+        final String expression = "1 * ((3 + ))";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(10);
+        }
+    }
+
+    @Test
+    public void invalidExpressionCausesExceptionWithCharacterInfo() {
+        final String expression = "2d6 + ";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(6);
+        }
+    }
+
+    @Test
+    public void invalidMultilineExpressionCausesExceptionWithCharacterInfo() {
+        final String expression = "\t\n  \n2d6 + ";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(3);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(6);
+        }
+    }
+
+    @Test
+    public void invalidEmptyInput() {
+        final String expression = "";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(0);
+        }
+    }
+
+    @Test
+    public void invalidToken() {
+        final String expression = "2d6 + abc";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(9);
+            assertThat(re.getOffendingToken()).extracting(Token::getStartIndex)
+                                              .isEqualTo(9);
+            assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
+                                              .isEqualTo(8);
+            assertThat(re.getExpectedTokens()
+                         .toList())
+                    .containsExactlyInAnyOrder(JSimLexer.NUMBER, JSimLexer.D, JSimLexer.LB);
+        }
+    }
+
+    @Test
+    public void wrongToken() {
+        final String expression = "2d6 d8";
+
+        try {
+            final Statement result = parser.parse(expression);
+            fail(format("Parsed a value: %s", result));
+        } catch (RecognitionException re) {
+            assertThat(re.getOffendingToken()).extracting(Token::getLine)
+                                              .isEqualTo(1);
+            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
+                                              .isEqualTo(4);
+            assertThat(re.getOffendingToken()).extracting(Token::getStartIndex)
+                                              .isEqualTo(4);
+            assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
+                                              .isEqualTo(4);
+            assertThat(re.getExpectedTokens()
+                         .toList())
+                    .containsExactlyInAnyOrder(JSimLexer.NUMBER, JSimLexer.D, JSimLexer.LB);
+        }
     }
 }

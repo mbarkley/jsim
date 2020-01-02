@@ -10,10 +10,7 @@ import ca.mbarkley.jsim.model.Expression.Operator;
 import ca.mbarkley.jsim.model.Question;
 import ca.mbarkley.jsim.model.Statement;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.*;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -34,9 +31,15 @@ public class Parser {
     public Statement parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
+        lexer.removeErrorListeners();
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
         final JSimParser parser = new JSimParser(tokenStream);
+        parser.removeErrorListeners();
         final JSimParser.JsimContext ctx = parser.jsim();
+
+        if (ctx.exception != null) {
+            throw ctx.exception;
+        }
 
         final ExpressionVisitor expressionVisitor = new ExpressionVisitor();
         final QuestionVisitor questionVisitor = new QuestionVisitor(expressionVisitor);
@@ -131,6 +134,8 @@ public class Parser {
                 return visitBinaryExpression(ctx);
             } else if (ctx.term() != null && ctx.expression() == null) {
                 return visitTerm(ctx.term());
+            } else if (ctx.exception != null) {
+                throw ctx.exception;
             } else {
                 throw new IllegalStateException();
             }
