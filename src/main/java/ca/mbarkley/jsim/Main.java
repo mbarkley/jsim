@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.RecognitionException;
 public class Main {
     public static void main(String[] args) {
         final String input;
-        if (args.length > 1) {
+        if (args.length > 0) {
             input = String.join(" ", args);
         } else {
              throw new IllegalArgumentException("Must supply statement as command line argument");
