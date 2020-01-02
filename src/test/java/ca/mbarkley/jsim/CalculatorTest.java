@@ -14,14 +14,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Offset.offset;
 
 public class CalculatorTest {
-    Calculator calculator = new Calculator();
     Parser parser = new Parser();
 
     @Test
     public void rollLessThanConstant() {
         final Question question = parser.parseQuestion("d6 < 4");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.5, result.get(true).getProbability(), 0.0001);
     }
@@ -30,7 +29,7 @@ public class CalculatorTest {
     public void complexRollGreaterThanConstant() {
         final Question question = parser.parseQuestion("2d6 + 1 > 6");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.722, result.get(true).getProbability(), 0.001);
     }
@@ -39,7 +38,7 @@ public class CalculatorTest {
     public void multipliedRollsGreaterThanConstant() {
         final Question question = parser.parseQuestion("d4 * d4 > 8");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.250, result.get(true).getProbability(), 0.001);
     }
@@ -48,7 +47,7 @@ public class CalculatorTest {
     public void complexRollLessThanComplexRoll() {
         final Question question = parser.parseQuestion("2d6 + 1 < 2d8 - 4");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.20095, result.get(true).getProbability(), 0.00001);
     }
@@ -57,7 +56,7 @@ public class CalculatorTest {
     public void constantLessThanConstant() {
         final Question question = parser.parseQuestion("1 < 2");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(1.0, result.get(true).getProbability(), 0.00001);
     }
@@ -66,7 +65,7 @@ public class CalculatorTest {
     public void bigAdditionQuestion() {
         final Question question = parser.parseQuestion("6d20 + 14d20 > 200");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.643, result.get(true).getProbability(), 0.001);
     }
@@ -75,7 +74,7 @@ public class CalculatorTest {
     public void bigMultiRollQuestion() {
         final Question question = parser.parseQuestion("20d20 > 200");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.643, result.get(true).getProbability(), 0.001);
     }
@@ -84,7 +83,7 @@ public class CalculatorTest {
     public void reallyBigMultiRollQuestion() {
         final Question question = parser.parseQuestion("100d20 > 1000");
 
-        final Map<Boolean, Event<Boolean>> result = calculator.calculateResult(question);
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
 
         Assert.assertEquals(0.804, result.get(true).getProbability(), 0.001);
     }
@@ -93,7 +92,7 @@ public class CalculatorTest {
     public void simpleExpressionResults() {
         final Expression expression = parser.parseExpression("2d4");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -113,7 +112,7 @@ public class CalculatorTest {
     public void highDiceExpressionResults() {
         final Expression expression = parser.parseExpression("7d4H1");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -130,7 +129,7 @@ public class CalculatorTest {
     public void lowDiceExpressionResults() {
         final Expression expression = parser.parseExpression("7d4L1");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -147,7 +146,7 @@ public class CalculatorTest {
     public void orderOfOperationsWithSubtraction() {
         final Expression expression = parser.parseExpression("2 - 1 + 1");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -161,7 +160,7 @@ public class CalculatorTest {
     public void orderOfOperationsWithMultiplication() {
         final Expression expression = parser.parseExpression("2 + 1 * 3");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -175,7 +174,7 @@ public class CalculatorTest {
     public void orderOfOperationsWithDivision() {
         final Expression expression = parser.parseExpression("2 + 1 / 3");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -189,7 +188,7 @@ public class CalculatorTest {
     public void orderOfOperationsWithDivisionAndMultiplication() {
         final Expression expression = parser.parseExpression("3 * 1 / 3");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
@@ -203,7 +202,7 @@ public class CalculatorTest {
     public void fullBedmas() {
         final Expression expression = parser.parseExpression("3 * (3 + 1) / 4 * 10");
 
-        final Map<Integer, Double> result = calculator.calculateResult(expression)
+        final Map<Integer, Double> result = expression.calculateResults()
                                                       .entrySet()
                                                       .stream()
                                                       .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));

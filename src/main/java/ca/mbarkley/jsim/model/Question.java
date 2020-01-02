@@ -1,14 +1,30 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.prob.Event;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 
+import java.util.stream.Stream;
+
+import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
 import static java.lang.String.format;
 
 @Value
-public class Question extends Statement {
+@EqualsAndHashCode(callSuper = false)
+public class Question extends Statement<Boolean> {
     Expression left;
     Comparator comparator;
     Expression right;
+
+    @Override
+    public Stream<Event<Boolean>> events() {
+        final Stream<Event<Integer>> left = getLeft().events();
+        final Stream<Event<Integer>> right = getRight().events();
+
+        return productOfIndependent(left,
+                                    right,
+                                    (l, r) -> getComparator().evaluate(l, r));
+    }
 
     @Override
     public String toString() {

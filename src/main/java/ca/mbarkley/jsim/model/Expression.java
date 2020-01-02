@@ -1,6 +1,7 @@
 package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.prob.Event;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 import java.util.List;
@@ -12,12 +13,11 @@ import static java.lang.String.format;
 import static java.util.Comparator.comparingInt;
 import static java.util.stream.Collectors.*;
 
-public abstract class Expression extends Statement {
+public abstract class Expression extends Statement<Integer> {
     private Expression() {}
 
-    public abstract Stream<Event<Integer>> events();
-
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class Constant extends Expression {
         int value;
 
@@ -33,6 +33,7 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class Bracketed extends Expression {
         Expression subExpression;
 
@@ -48,6 +49,7 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class HighDice extends Expression {
         HomogeneousDicePool dicePool;
         int numberOfDice;
@@ -81,6 +83,7 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class LowDice extends Expression {
         HomogeneousDicePool dicePool;
         int numberOfDice;
@@ -114,6 +117,7 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class HomogeneousDicePool extends Expression {
         int numberOfDice;
         int diceSides;
@@ -134,6 +138,7 @@ public abstract class Expression extends Statement {
     }
 
     @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpExpression extends Expression {
         Expression left;
         Operator operator;
