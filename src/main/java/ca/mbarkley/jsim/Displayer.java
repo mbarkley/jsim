@@ -15,11 +15,11 @@ import static java.util.stream.Collectors.toList;
 public class Displayer {
     private final int desiredWidth;
 
-    public <T extends Comparable<T>> String createSortedHistogram(Stream<Event<T>> events) {
-        return createSortedHistogram(events, comparing(Event::getValue, naturalOrder()));
+    public <T extends Comparable<T>> String createSortedHistogram(String title, Stream<Event<T>> events) {
+        return createSortedHistogram(title, events, comparing(Event::getValue, naturalOrder()));
     }
 
-    private <T> String createSortedHistogram(Stream<Event<T>> events, Comparator<Event<T>> comparator) {
+    private <T> String createSortedHistogram(String title, Stream<Event<T>> events, Comparator<Event<T>> comparator) {
         final List<Event<T>> sortedEvents = events.sorted(comparator)
                                                   .collect(toList());
 
@@ -49,6 +49,18 @@ public class Displayer {
             final int totalGraphSectionWidth = largestPrintedCharLength + minRightPadding;
 
             final StringBuilder sb = new StringBuilder();
+
+            // Header
+            final int barLength = (desiredWidth - title.length() - 2) / 2;
+            final int remainderAdjustment = (desiredWidth - title.length() - 2) % 2;
+            sb.append("-".repeat(barLength))
+              .append(" ")
+              .append(title)
+              .append(" ")
+              .append(" ".repeat(remainderAdjustment))
+              .append("-".repeat(barLength))
+              .append("\n");
+
             for (final Event<T> event : sortedEvents) {
                 final double probability = event.getProbability();
                 final int charCount = charCount(charFactor, probability);

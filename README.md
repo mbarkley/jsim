@@ -20,9 +20,16 @@ For convenience, create an alias for running the jar (modifying the path to the 
 alias jsim="java -jar $HOME/jsim/target/jsim*.jar"
 ```
 
-Sample input:
+### Command Line Arguments
+
+Use the `-c` argument to pass an expression via command-line argument:
 ```bash
-$ jsim 2d6
+$ jsim -c 2d6
+```
+
+Alternatively, pipe an expression to standard input:
+```bash
+$ echo 2d6 | jsim
 ```
 
 Sample output:
@@ -40,6 +47,10 @@ Sample output:
 11 |*************************************                                                                               5.56%
 12 |******************                                                                                                  2.78%
 ```
+
+### Interactive Mode
+
+Running the jar from an interactive shell without arguments or piped input will result in a repl.
 
 ### Types of expressions
 

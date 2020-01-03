@@ -13,8 +13,9 @@ public class DisplayerTest {
     @Test
     public void simpleHistogram() {
         final Statement<?> stmt = parser.parse("2d6");
-        final String sortedHistogram = displayer.createSortedHistogram(stmt.calculateResults().values().stream());
+        final String sortedHistogram = displayer.createSortedHistogram("2d6", stmt.calculateResults().values().stream());
         assertThat(sortedHistogram).isEqualTo(
+                        "--------------------------------------------------------- 2d6  ---------------------------------------------------------\n" +
                         "2  |******************                                                                                                  2.78%\n" +
                         "3  |*************************************                                                                               5.56%\n" +
                         "4  |*******************************************************                                                             8.33%\n" +
