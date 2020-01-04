@@ -5,12 +5,14 @@ WHITESPACE : (' ' | '\t')+ -> skip;
 
 NUMBER : [0-9]+;
 
+// Dice pool symbols
 D : ('d' | 'D');
 
 H : ('h' | 'H');
 
 L : ('l' | 'L');
 
+// Arithmetic symbols
 TIMES : '*';
 
 DIVIDE : '/';
@@ -19,23 +21,32 @@ PLUS : '+';
 
 MINUS : '-';
 
+LB : '(';
+
+RB: ')';
+
+// Relation symbols
 LT : '<';
 
 GT : '>';
 
 EQ : '=';
 
-LB : '(';
+// Boolean operators
+AND : 'and';
 
-RB: ')';
+OR : 'or';
 
 // Grammar rules
-
 jsim : (question | expression) EOF;
 
-question : expression LT expression |
-           expression GT expression |
-           expression EQ expression;
+question : predicate AND question |
+           predicate OR question |
+           predicate;
+
+predicate : expression LT expression |
+            expression GT expression |
+            expression EQ expression;
 
 expression : term TIMES expression |
              term DIVIDE expression |

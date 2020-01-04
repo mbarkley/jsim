@@ -2,6 +2,7 @@ package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.Value;
 
 import java.util.List;
@@ -155,7 +156,7 @@ public abstract class Expression extends Statement<Integer> {
         }
     }
 
-    public enum Operator {
+    public enum Operator implements HasSymbol<Operator>, Comparable<Operator> {
         DIVIDE("/", 2) {
             @Override
             public int apply(int left, int right) {
@@ -181,7 +182,9 @@ public abstract class Expression extends Statement<Integer> {
             }
         };
 
+        @Getter
         private final String symbol;
+        @Getter
         private final int precedent;
 
         Operator(String symbol, int precedent) {
@@ -196,19 +199,8 @@ public abstract class Expression extends Statement<Integer> {
 
         public abstract int apply(int left, int right);
 
-        public boolean hasEqualOrGreaterPrecedent(Operator subOperator) {
-            // For equal precedent, operators are applied left-to-right
-            return precedent >= subOperator.precedent;
-        }
-
         public static Optional<Operator> lookup(String symbol) {
-            for (Operator op : values()) {
-                if (op.symbol.equals(symbol)) {
-                    return Optional.of(op);
-                }
-            }
-
-            return Optional.empty();
+            return HasSymbol.lookup(symbol, values());
         }
     }
 }

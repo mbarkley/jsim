@@ -23,7 +23,7 @@ public class ParserTest {
     public void singleDieRoll() {
         final String expression = "d6";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
@@ -32,7 +32,7 @@ public class ParserTest {
     public void multipleDiceRoll() {
         final String expression = "3d8";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new HomogeneousDicePool(3, 8), result);
     }
@@ -41,7 +41,7 @@ public class ParserTest {
     public void highDieRoll() {
         final String expression = "3d6H2";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new Expression.HighDice(new HomogeneousDicePool(3, 6), 2), result);
     }
@@ -50,7 +50,7 @@ public class ParserTest {
     public void lowDieRoll() {
         final String expression = "3d6L2";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new Expression.LowDice(new HomogeneousDicePool(3, 6), 2), result);
     }
@@ -59,7 +59,7 @@ public class ParserTest {
     public void leadingWhitespace() {
         final String expression = " d6";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
@@ -68,7 +68,7 @@ public class ParserTest {
     public void trailingWhitespace() {
         final String expression = "d6 ";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
     }
@@ -77,7 +77,7 @@ public class ParserTest {
     public void singleRollPlusConstant() {
         final String expression = "d6 + 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant(1)), result);
     }
@@ -86,7 +86,7 @@ public class ParserTest {
     public void singleRollMinusConstant() {
         final String expression = "d6 - 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant(1)), result);
     }
@@ -95,7 +95,7 @@ public class ParserTest {
     public void multipleDiceRollPlusConstant() {
         final String expression = "3d8 + 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant(1)), result);
     }
@@ -104,7 +104,7 @@ public class ParserTest {
     public void multipleDiceRollMinusConstant() {
         final String expression = "3d8 - 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant(1)), result);
     }
@@ -113,7 +113,7 @@ public class ParserTest {
     public void multipleDiceRollTimesConstant() {
         final String expression = "3d8 * 2";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant(2)), result);
     }
@@ -122,7 +122,7 @@ public class ParserTest {
     public void multipleDiceRollDivideConstant() {
         final String expression = "3d8 / 2";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant(2)), result);
     }
@@ -131,7 +131,7 @@ public class ParserTest {
     public void sumOfDicePools() {
         final String expression = "3d8 + 2d6 + 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final BinaryOpExpression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
@@ -144,11 +144,11 @@ public class ParserTest {
     public void lessThan() {
         final String expression = "3d8 < 2d6";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question(left, Question.Comparator.LT, right);
+        final Question expected = new Question.Predicate(left, Question.Comparator.LT, right);
         assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
@@ -156,11 +156,11 @@ public class ParserTest {
     public void greaterThan() {
         final String expression = "3d8 > 2d6";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question(left, Question.Comparator.GT, right);
+        final Question expected = new Question.Predicate(left, Question.Comparator.GT, right);
         assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
@@ -168,11 +168,11 @@ public class ParserTest {
     public void equalQuestion() {
         final String expression = "3d8 = 2d6";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question(left, Question.Comparator.EQ, right);
+        final Question expected = new Question.Predicate(left, Question.Comparator.EQ, right);
         assertThat(result).isEqualToComparingFieldByField(expected);
     }
 
@@ -180,7 +180,7 @@ public class ParserTest {
     public void subtractionThenAddition() {
         final String expression = "2 - 1 + 1";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final Expression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new Constant(2), Operator.MINUS, new Constant(1)),
@@ -194,7 +194,7 @@ public class ParserTest {
     public void bracketed() {
         final String expression = "2 * (2d6 + 1)";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         final Expression expected = new BinaryOpExpression(
                 new Constant(2),
@@ -212,7 +212,7 @@ public class ParserTest {
     public void complexConstantExpression() {
         final String expression = "3 * (3 + 1) / 4 * 10";
 
-        final Statement result = parser.parse(expression);
+        final Statement<?> result = parser.parse(expression);
 
         assertThat(result).hasToString(expression);
     }
@@ -222,7 +222,7 @@ public class ParserTest {
         final String expression = "2d6 > ";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -237,7 +237,7 @@ public class ParserTest {
         final String expression = "2d6 > 3 * ";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -252,7 +252,7 @@ public class ParserTest {
         final String expression = "1 * ((3 + ))";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -267,7 +267,7 @@ public class ParserTest {
         final String expression = "2d6 + ";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -282,7 +282,7 @@ public class ParserTest {
         final String expression = "\t\n  \n2d6 + ";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -297,7 +297,7 @@ public class ParserTest {
         final String expression = "";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -312,7 +312,7 @@ public class ParserTest {
         final String expression = "2d6 + abc";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -334,7 +334,7 @@ public class ParserTest {
         final String expression = "2d6 d8";
 
         try {
-            final Statement result = parser.parse(expression);
+            final Statement<?> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)

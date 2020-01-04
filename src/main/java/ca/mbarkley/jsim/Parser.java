@@ -7,10 +7,18 @@ import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.Expression.Operator;
+import ca.mbarkley.jsim.model.PrecedenceRotator;
 import ca.mbarkley.jsim.model.Question;
+import ca.mbarkley.jsim.model.Question.BinaryOpQuestion;
+import ca.mbarkley.jsim.model.Question.BooleanOperator;
+import ca.mbarkley.jsim.model.Question.Comparator;
+import ca.mbarkley.jsim.model.Question.Predicate;
 import ca.mbarkley.jsim.model.Statement;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Token;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -52,6 +60,7 @@ public class Parser {
     private static class StatementVisitor extends JSimBaseVisitor<Statement> {
         private final ExpressionVisitor expressionVisitor;
         private final QuestionVisitor questionVisitor;
+
         @Override
         public Statement visitJsim(JSimParser.JsimContext ctx) {
             if (ctx.question() != null) {
@@ -70,25 +79,31 @@ public class Parser {
 
         @Override
         public Question visitQuestion(JSimParser.QuestionContext ctx) {
+            if (ctx.question() == null) {
+                return visitPredicate(ctx.predicate());
+            } else {
+                final String booleanOperatorText = ctx.getChild(1).getText();
+                final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
+                                                                .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
+                final PrecedenceRotator<BooleanOperator, Question, BinaryOpQuestion> rotator = PrecedenceRotator.binaryOpQuestionRotator();
+                final JSimParser.PredicateContext left = ctx.predicate();
+                final Question right = visitQuestion(ctx.question());
+
+                final BinaryOpQuestion question = new BinaryOpQuestion(visitPredicate(left), operator, right);
+
+                return rotator.maybeRotate(question).orElse(question);
+            }
+        }
+
+        @Override
+        public Question visitPredicate(JSimParser.PredicateContext ctx) {
             final Expression left = expressionVisitor.visitExpression(ctx.expression(0));
             final Expression right = expressionVisitor.visitExpression(ctx.expression(1));
             final String comparatorText = ctx.getChild(1).getText();
-            final Question.Comparator comparator;
-            switch (comparatorText) {
-                case "<":
-                    comparator = Question.Comparator.LT;
-                    break;
-                case ">":
-                    comparator = Question.Comparator.GT;
-                    break;
-                case "=":
-                    comparator = Question.Comparator.EQ;
-                    break;
-                default:
-                    throw new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText));
-            }
+            final Comparator comparator = Comparator.lookup(comparatorText)
+                                                    .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
-            return new Question(left, comparator, right);
+            return new Predicate(left, comparator, right);
         }
     }
 
@@ -154,22 +169,12 @@ public class Parser {
 
         private Expression visitBinaryExpression(JSimParser.ExpressionContext ctx) {
             final Expression left = visitTerm(ctx.term());
-            final Expression subExpression = visitExpression(ctx.expression());
+            final Expression right = visitExpression(ctx.expression());
             final Operator sign = getOperator(ctx);
-            if (subExpression instanceof BinaryOpExpression) {
-                final Expression subLeft = ((BinaryOpExpression) subExpression).getLeft();
-                final Expression subRight = ((BinaryOpExpression) subExpression).getRight();
-                final Operator subOperator = ((BinaryOpExpression) subExpression).getOperator();
-                if (sign.hasEqualOrGreaterPrecedent(subOperator)) {
-                    final BinaryOpExpression rotatedLeft = new BinaryOpExpression(left, sign, subLeft);
+            final BinaryOpExpression combined = new BinaryOpExpression(left, sign, right);
+            final PrecedenceRotator<Operator, Expression, BinaryOpExpression> rotator = PrecedenceRotator.binaryOpExpressionRotator();
 
-                    return new BinaryOpExpression(rotatedLeft, subOperator, subRight);
-                } else {
-                    return new BinaryOpExpression(left, sign, subExpression);
-                }
-            } else {
-                return new BinaryOpExpression(left, sign, subExpression);
-            }
+            return rotator.maybeRotate(combined).orElse(combined);
         }
 
         private Operator getOperator(JSimParser.ExpressionContext ctx) {

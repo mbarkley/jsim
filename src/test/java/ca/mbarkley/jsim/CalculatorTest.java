@@ -211,4 +211,31 @@ public class CalculatorTest {
         assertThat(result).hasEntrySatisfying(30, prob -> assertThat(prob).isCloseTo(1.0, offset))
                           .containsOnlyKeys(30);
     }
+
+    @Test
+    public void disjunctive() {
+        final Question question = parser.parseQuestion("d6 = 1 or d6 = 2");
+
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+
+        Assert.assertEquals(11.0 / 36.0, result.get(true).getProbability(), 0.0001);
+    }
+
+    @Test
+    public void conjunctive() {
+        final Question question = parser.parseQuestion("d6 = 1 and d6 = 2");
+
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+
+        Assert.assertEquals(1.0 / 36.0, result.get(true).getProbability(), 0.0001);
+    }
+
+    @Test
+    public void booleanOrderOfOperations() {
+        final Question question = parser.parseQuestion("d6 = 1 and d6 = 2 or d100 = 1");
+
+        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+
+        Assert.assertEquals( 1.0 - ((35.0 / 36.0) * (99.0 / 100.0)), result.get(true).getProbability(), 0.0001);
+    }
 }
