@@ -1,8 +1,8 @@
 package ca.mbarkley.jsim;
 
-import ca.mbarkley.jsim.antlr.JSimBaseVisitor;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
+import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
 import ca.mbarkley.jsim.model.BooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.*;
 import ca.mbarkley.jsim.model.Expression;
@@ -42,7 +42,7 @@ public class Parser {
     }
 
     @RequiredArgsConstructor
-    private static class StatementVisitor extends JSimBaseVisitor<List<Expression<?>>> {
+    private static class StatementVisitor extends JSimParserBaseVisitor<List<Expression<?>>> {
         private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
         private final BooleanExpressionVisitor booleanExpressionVisitor;
 
@@ -69,7 +69,7 @@ public class Parser {
     }
 
     @RequiredArgsConstructor
-    private static class BooleanExpressionVisitor extends JSimBaseVisitor<Expression<Boolean>> {
+    private static class BooleanExpressionVisitor extends JSimParserBaseVisitor<Expression<Boolean>> {
         private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
 
         @Override
@@ -117,7 +117,7 @@ public class Parser {
         }
     }
 
-    private static class ArithmeticExpressionVisitor extends JSimBaseVisitor<Expression<Integer>> {
+    private static class ArithmeticExpressionVisitor extends JSimParserBaseVisitor<Expression<Integer>> {
         @Override
         public Expression<Integer> visitSingleRoll(JSimParser.SingleRollContext ctx) {
             final Token rawNumber = ctx.NUMBER().getSymbol();
