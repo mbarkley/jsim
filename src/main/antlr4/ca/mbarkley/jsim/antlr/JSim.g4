@@ -44,7 +44,7 @@ OR : 'or';
 TERMINATOR : '\n' | ';';
 
 // Grammar rules
-jsim : TERMINATOR* statement (TERMINATOR+ statement)* TERMINATOR* EOF;
+jsim : statement? (TERMINATOR+ statement)* TERMINATOR* EOF;
 
 statement : arithmeticExpression |
             booleanExpression;

@@ -293,18 +293,11 @@ public class ParserTest {
     }
 
     @Test
-    public void invalidEmptyInput() {
+    public void emptyInput() {
         final String expression = "";
 
-        try {
-            final List<Expression<?>> result = parser.parse(expression);
-            fail(format("Parsed a value: %s", result));
-        } catch (RecognitionException re) {
-            assertThat(re.getOffendingToken()).extracting(Token::getLine)
-                                              .isEqualTo(1);
-            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
-                                              .isEqualTo(0);
-        }
+        final List<Expression<?>> result = parser.parse(expression);
+        assertThat(result).isEmpty();
     }
 
     @Test
