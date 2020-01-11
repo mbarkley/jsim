@@ -10,6 +10,8 @@ import org.antlr.v4.runtime.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
+
 import static ca.mbarkley.jsim.model.Expression.Operator.PLUS;
 import static ca.mbarkley.jsim.model.Expression.Operator.TIMES;
 import static java.lang.String.format;
@@ -23,178 +25,178 @@ public class ParserTest {
     public void singleDieRoll() {
         final String expression = "d6";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
+        assertThat(result).containsExactly(new HomogeneousDicePool(1, 6));
     }
 
     @Test
     public void multipleDiceRoll() {
         final String expression = "3d8";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new HomogeneousDicePool(3, 8), result);
+        assertThat(result).containsExactly(new HomogeneousDicePool(3, 8));
     }
 
     @Test
     public void highDieRoll() {
         final String expression = "3d6H2";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.HighDice(new HomogeneousDicePool(3, 6), 2), result);
+        assertThat(result).containsExactly(new Expression.HighDice(new HomogeneousDicePool(3, 6), 2));
     }
 
     @Test
     public void lowDieRoll() {
         final String expression = "3d6L2";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new Expression.LowDice(new HomogeneousDicePool(3, 6), 2), result);
+        assertThat(result).containsExactly(new Expression.LowDice(new HomogeneousDicePool(3, 6), 2));
     }
 
     @Test
     public void leadingWhitespace() {
         final String expression = " d6";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
+        assertThat(result).containsExactly(new HomogeneousDicePool(1, 6));
     }
 
     @Test
     public void trailingWhitespace() {
         final String expression = "d6 ";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new HomogeneousDicePool(1, 6), result);
+        assertThat(result).containsExactly(new HomogeneousDicePool(1, 6));
     }
 
     @Test
     public void singleRollPlusConstant() {
         final String expression = "d6 + 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant(1)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant(1)));
     }
 
     @Test
     public void singleRollMinusConstant() {
         final String expression = "d6 - 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant(1)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant(1)));
     }
 
     @Test
     public void multipleDiceRollPlusConstant() {
         final String expression = "3d8 + 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant(1)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant(1)));
     }
 
     @Test
     public void multipleDiceRollMinusConstant() {
         final String expression = "3d8 - 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant(1)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant(1)));
     }
 
     @Test
     public void multipleDiceRollTimesConstant() {
         final String expression = "3d8 * 2";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant(2)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant(2)));
     }
 
     @Test
     public void multipleDiceRollDivideConstant() {
         final String expression = "3d8 / 2";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        Assert.assertEquals(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant(2)), result);
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant(2)));
     }
 
     @Test
     public void sumOfDicePools() {
         final String expression = "3d8 + 2d6 + 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final BinaryOpExpression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
                 PLUS,
                 new Constant(1));
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void lessThan() {
         final String expression = "3d8 < 2d6";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question.Predicate(left, Question.Comparator.LT, right);
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        final Question expected = new Question.BinaryBooleanExpression(left, Question.Comparator.LT, right);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void greaterThan() {
         final String expression = "3d8 > 2d6";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question.Predicate(left, Question.Comparator.GT, right);
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        final Question expected = new Question.BinaryBooleanExpression(left, Question.Comparator.GT, right);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void equalQuestion() {
         final String expression = "3d8 = 2d6";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final Expression left = new HomogeneousDicePool(3, 8);
         final Expression right = new HomogeneousDicePool(2, 6);
-        final Question expected = new Question.Predicate(left, Question.Comparator.EQ, right);
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        final Question expected = new Question.BinaryBooleanExpression(left, Question.Comparator.EQ, right);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void subtractionThenAddition() {
         final String expression = "2 - 1 + 1";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final Expression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new Constant(2), Operator.MINUS, new Constant(1)),
                 PLUS,
                 new Constant(1)
         );
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void bracketed() {
         final String expression = "2 * (2d6 + 1)";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
         final Expression expected = new BinaryOpExpression(
                 new Constant(2),
@@ -205,16 +207,16 @@ public class ParserTest {
                         new Constant(1)
                 ))
         );
-        assertThat(result).isEqualToComparingFieldByField(expected);
+        assertThat(result).containsExactly(expected);
     }
 
     @Test
     public void complexConstantExpression() {
         final String expression = "3 * (3 + 1) / 4 * 10";
 
-        final Statement<?> result = parser.parse(expression);
+        final List<Statement<?>> result = parser.parse(expression);
 
-        assertThat(result).hasToString(expression);
+        assertThat(result).hasToString(List.of(expression).toString());
     }
 
     @Test
@@ -222,7 +224,7 @@ public class ParserTest {
         final String expression = "2d6 > ";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -237,7 +239,7 @@ public class ParserTest {
         final String expression = "2d6 > 3 * ";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -252,7 +254,7 @@ public class ParserTest {
         final String expression = "1 * ((3 + ))";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -267,7 +269,7 @@ public class ParserTest {
         final String expression = "2d6 + ";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -282,7 +284,7 @@ public class ParserTest {
         final String expression = "\t\n  \n2d6 + ";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -297,7 +299,7 @@ public class ParserTest {
         final String expression = "";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -312,7 +314,7 @@ public class ParserTest {
         final String expression = "2d6 + abc";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -323,9 +325,6 @@ public class ParserTest {
                                               .isEqualTo(9);
             assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
                                               .isEqualTo(8);
-            assertThat(re.getExpectedTokens()
-                         .toList())
-                    .containsExactlyInAnyOrder(JSimLexer.NUMBER, JSimLexer.D, JSimLexer.LB);
         }
     }
 
@@ -334,7 +333,7 @@ public class ParserTest {
         final String expression = "2d6 d8";
 
         try {
-            final Statement<?> result = parser.parse(expression);
+            final List<Statement<?>> result = parser.parse(expression);
             fail(format("Parsed a value: %s", result));
         } catch (RecognitionException re) {
             assertThat(re.getOffendingToken()).extracting(Token::getLine)
@@ -345,9 +344,6 @@ public class ParserTest {
                                               .isEqualTo(4);
             assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
                                               .isEqualTo(4);
-            assertThat(re.getExpectedTokens()
-                         .toList())
-                    .containsExactlyInAnyOrder(JSimLexer.NUMBER, JSimLexer.D, JSimLexer.LB);
         }
     }
 }

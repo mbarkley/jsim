@@ -38,7 +38,7 @@ public abstract class Question extends Statement<Boolean> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class Predicate extends Question {
+    public static class BinaryBooleanExpression extends Question {
         Expression left;
         Comparator comparator;
         Expression right;
@@ -56,6 +56,26 @@ public abstract class Question extends Statement<Boolean> {
         @Override
         public String toString() {
             return format("%s %s %s", left, comparator, right);
+        }
+    }
+
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class BooleanConstant extends Question {
+        public static BooleanConstant TRUE = new BooleanConstant(true);
+        public static BooleanConstant FALSE = new BooleanConstant(false);
+
+        boolean value;
+
+        @Override
+        public Stream<Event<Boolean>> events() {
+            return Stream.of(new Event<>(value, 1.0));
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(value);
         }
     }
 

@@ -9,6 +9,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 public class BatchProcessor {
     private final int desiredWidth;
@@ -23,11 +24,13 @@ public class BatchProcessor {
 
     public void process(String input) {
         try {
-            final Statement<?> stmt = parser.parse(input);
-            final String cleanInput = stmt.toString();
-            final String sortedHistogram = displayer.createSortedHistogram(cleanInput, stmt.events());
+            final List<Statement<?>> stmts = parser.parse(input);
+            for (var stmt : stmts) {
+                final String cleanInput = stmt.toString();
+                final String sortedHistogram = displayer.createSortedHistogram(cleanInput, stmt.events());
 
-            System.out.print(sortedHistogram);
+                System.out.print(sortedHistogram);
+            }
         } catch (RecognitionException re) {
             System.err.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());
             System.exit(1);

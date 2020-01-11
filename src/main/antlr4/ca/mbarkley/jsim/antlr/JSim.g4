@@ -5,6 +5,10 @@ WHITESPACE : (' ' | '\t')+ -> skip;
 
 NUMBER : [0-9]+;
 
+TRUE : 'true';
+
+FALSE : 'false';
+
 // Dice pool symbols
 D : ('d' | 'D');
 
@@ -37,29 +41,39 @@ AND : 'and';
 
 OR : 'or';
 
+TERMINATOR : '\n' | ';';
+
 // Grammar rules
-jsim : (question | expression) EOF;
+jsim : TERMINATOR* statement (TERMINATOR+ statement)* TERMINATOR* EOF;
 
-question : predicate AND question |
-           predicate OR question |
-           predicate;
+statement : arithmeticExpression |
+            booleanExpression;
 
-predicate : expression LT expression |
-            expression GT expression |
-            expression EQ expression;
+booleanExpression : booleanTerm AND booleanExpression |
+                    booleanTerm OR booleanExpression |
+                    booleanTerm;
 
-expression : term TIMES expression |
-             term DIVIDE expression |
-             term PLUS expression |
-             term MINUS expression |
-             term;
+booleanTerm : arithmeticExpression LT arithmeticExpression |
+              arithmeticExpression GT arithmeticExpression |
+              arithmeticExpression EQ arithmeticExpression |
+              booleanLiteral;
 
-term : LB expression RB |
-       atom;
+arithmeticExpression : arithmeticTerm TIMES arithmeticExpression |
+                       arithmeticTerm DIVIDE arithmeticExpression |
+                       arithmeticTerm PLUS arithmeticExpression |
+                       arithmeticTerm MINUS arithmeticExpression |
+                       arithmeticTerm;
 
-atom : constant | singleRoll | multiRoll | highRoll | lowRoll;
+arithmeticTerm : LB arithmeticExpression RB |
+                 numberLiteral |
+                 singleRoll |
+                 multiRoll |
+                 highRoll |
+                 lowRoll;
 
-constant : NUMBER;
+booleanLiteral : TRUE | FALSE;
+
+numberLiteral : NUMBER;
 
 singleRoll : D NUMBER;
 

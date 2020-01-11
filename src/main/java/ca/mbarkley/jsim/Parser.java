@@ -9,10 +9,7 @@ import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.Expression.Operator;
 import ca.mbarkley.jsim.model.PrecedenceRotator;
 import ca.mbarkley.jsim.model.Question;
-import ca.mbarkley.jsim.model.Question.BinaryOpQuestion;
-import ca.mbarkley.jsim.model.Question.BooleanOperator;
-import ca.mbarkley.jsim.model.Question.Comparator;
-import ca.mbarkley.jsim.model.Question.Predicate;
+import ca.mbarkley.jsim.model.Question.*;
 import ca.mbarkley.jsim.model.Statement;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -20,23 +17,14 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 
+import java.util.List;
+
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 public class Parser {
-    public Question parseQuestion(String expression) throws RecognitionException {
-        final Statement<?> parsed = parse(expression);
-
-        return (Question) parsed;
-    }
-
-    public Expression parseExpression(String expression) throws RecognitionException {
-        final Statement<?> parsed = parse(expression);
-
-        return (Expression) parsed;
-    }
-
-    public Statement<?> parse(String expression) throws RecognitionException {
+    public List<Statement<?>> parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
@@ -49,65 +37,90 @@ public class Parser {
             throw ctx.exception;
         }
 
-        final ExpressionVisitor expressionVisitor = new ExpressionVisitor();
-        final QuestionVisitor questionVisitor = new QuestionVisitor(expressionVisitor);
-        final StatementVisitor visitor = new StatementVisitor(expressionVisitor, questionVisitor);
+        final ArithmeticExpressionVisitor arithmeticExpressionVisitor = new ArithmeticExpressionVisitor();
+        final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor(arithmeticExpressionVisitor);
+        final StatementVisitor visitor = new StatementVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor);
 
         return visitor.visit(ctx);
     }
 
     @RequiredArgsConstructor
-    private static class StatementVisitor extends JSimBaseVisitor<Statement> {
-        private final ExpressionVisitor expressionVisitor;
-        private final QuestionVisitor questionVisitor;
+    private static class StatementVisitor extends JSimBaseVisitor<List<Statement<?>>> {
+        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
+        private final BooleanExpressionVisitor booleanExpressionVisitor;
 
         @Override
-        public Statement visitJsim(JSimParser.JsimContext ctx) {
-            if (ctx.question() != null) {
-                return questionVisitor.visitQuestion(ctx.question());
-            } else if (ctx.expression() != null) {
-                return expressionVisitor.visitExpression(ctx.expression());
+        public List<Statement<?>> visitJsim(JSimParser.JsimContext ctx) {
+            return ctx.statement()
+                      .stream()
+                      .flatMap(stmt -> visitStatement(stmt).stream())
+                      .collect(toList());
+        }
+
+        @Override
+        public List<Statement<?>> visitStatement(JSimParser.StatementContext ctx) {
+            if (ctx.exception != null) {
+                throw ctx.exception;
+            } else if (ctx.booleanExpression() != null) {
+                return List.of(booleanExpressionVisitor.visitBooleanExpression(ctx.booleanExpression()));
+            } else if (ctx.arithmeticExpression() != null) {
+                return List.of(arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression()));
             } else {
-                throw new IllegalArgumentException(format("Statement is neither a question or expression [%s]", ctx.getText()));
+                throw new IllegalArgumentException(format("Statement is neither a question or expression [%s]", ctx));
             }
         }
     }
 
     @RequiredArgsConstructor
-    private static class QuestionVisitor extends JSimBaseVisitor<Question> {
-        private final ExpressionVisitor expressionVisitor;
+    private static class BooleanExpressionVisitor extends JSimBaseVisitor<Question> {
+        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
 
         @Override
-        public Question visitQuestion(JSimParser.QuestionContext ctx) {
-            if (ctx.question() == null) {
-                return visitPredicate(ctx.predicate());
+        public Question visitBooleanExpression(JSimParser.BooleanExpressionContext ctx) {
+            if (ctx.exception != null) {
+                throw ctx.exception;
+            } else if (ctx.booleanExpression() == null) {
+                return visitBooleanTerm(ctx.booleanTerm());
             } else {
                 final String booleanOperatorText = ctx.getChild(1).getText();
                 final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
                                                                 .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
                 final PrecedenceRotator<BooleanOperator, Question, BinaryOpQuestion> rotator = PrecedenceRotator.binaryOpQuestionRotator();
-                final JSimParser.PredicateContext left = ctx.predicate();
-                final Question right = visitQuestion(ctx.question());
+                final JSimParser.BooleanTermContext left = ctx.booleanTerm();
+                final Question right = visitBooleanExpression(ctx.booleanExpression());
 
-                final BinaryOpQuestion question = new BinaryOpQuestion(visitPredicate(left), operator, right);
+                final BinaryOpQuestion question = new BinaryOpQuestion(visitBooleanTerm(left), operator, right);
 
                 return rotator.maybeRotate(question).orElse(question);
             }
         }
 
         @Override
-        public Question visitPredicate(JSimParser.PredicateContext ctx) {
-            final Expression left = expressionVisitor.visitExpression(ctx.expression(0));
-            final Expression right = expressionVisitor.visitExpression(ctx.expression(1));
-            final String comparatorText = ctx.getChild(1).getText();
-            final Comparator comparator = Comparator.lookup(comparatorText)
-                                                    .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
+        public Question visitBooleanTerm(JSimParser.BooleanTermContext ctx) {
+            if (ctx.booleanLiteral() != null) {
+                return visitBooleanLiteral(ctx.booleanLiteral());
+            } else {
+                final Expression left = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(0));
+                final Expression right = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(1));
+                final String comparatorText = ctx.getChild(1).getText();
+                final Comparator comparator = Comparator.lookup(comparatorText)
+                                                        .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
-            return new Predicate(left, comparator, right);
+                return new BinaryBooleanExpression(left, comparator, right);
+            }
+        }
+
+        @Override
+        public Question visitBooleanLiteral(JSimParser.BooleanLiteralContext ctx) {
+            if (ctx.TRUE() != null) {
+                return BooleanConstant.TRUE;
+            } else {
+                return BooleanConstant.FALSE;
+            }
         }
     }
 
-    private static class ExpressionVisitor extends JSimBaseVisitor<Expression> {
+    private static class ArithmeticExpressionVisitor extends JSimBaseVisitor<Expression> {
         @Override
         public Expression visitSingleRoll(JSimParser.SingleRollContext ctx) {
             final Token rawNumber = ctx.NUMBER().getSymbol();
@@ -144,11 +157,11 @@ public class Parser {
         }
 
         @Override
-        public Expression visitExpression(JSimParser.ExpressionContext ctx) {
-            if (ctx.expression() != null) {
+        public Expression visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
+            if (ctx.arithmeticExpression() != null) {
                 return visitBinaryExpression(ctx);
-            } else if (ctx.term() != null && ctx.expression() == null) {
-                return visitTerm(ctx.term());
+            } else if (ctx.arithmeticTerm() != null && ctx.arithmeticExpression() == null) {
+                return visitArithmeticTerm(ctx.arithmeticTerm());
             } else if (ctx.exception != null) {
                 throw ctx.exception;
             } else {
@@ -157,19 +170,17 @@ public class Parser {
         }
 
         @Override
-        public Expression visitTerm(JSimParser.TermContext ctx) {
-            if (ctx.expression() != null) {
-                return new Bracketed(visitExpression(ctx.expression()));
-            } else if (ctx.atom() != null) {
-                return visitAtom(ctx.atom());
+        public Expression visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
+            if (ctx.arithmeticExpression() != null) {
+                return new Bracketed(visitArithmeticExpression(ctx.arithmeticExpression()));
             } else {
-                throw new IllegalStateException();
+                return visitChildren(ctx);
             }
         }
 
-        private Expression visitBinaryExpression(JSimParser.ExpressionContext ctx) {
-            final Expression left = visitTerm(ctx.term());
-            final Expression right = visitExpression(ctx.expression());
+        private Expression visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
+            final Expression left = visitArithmeticTerm(ctx.arithmeticTerm());
+            final Expression right = visitArithmeticExpression(ctx.arithmeticExpression());
             final Operator sign = getOperator(ctx);
             final BinaryOpExpression combined = new BinaryOpExpression(left, sign, right);
             final PrecedenceRotator<Operator, Expression, BinaryOpExpression> rotator = PrecedenceRotator.binaryOpExpressionRotator();
@@ -177,14 +188,14 @@ public class Parser {
             return rotator.maybeRotate(combined).orElse(combined);
         }
 
-        private Operator getOperator(JSimParser.ExpressionContext ctx) {
+        private Operator getOperator(JSimParser.ArithmeticExpressionContext ctx) {
             final String operatorText = ctx.getChild(1).getText();
             return Operator.lookup(operatorText)
                            .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));
         }
 
         @Override
-        public Expression visitConstant(JSimParser.ConstantContext ctx) {
+        public Expression visitNumberLiteral(JSimParser.NumberLiteralContext ctx) {
             return new Expression.Constant(parseInt(ctx.NUMBER().getText()));
         }
 

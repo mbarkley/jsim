@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.RecognitionException;
 
 import java.io.Console;
+import java.util.List;
 
 public class ConsoleProcessor {
     private final Parser parser;
@@ -26,8 +27,8 @@ public class ConsoleProcessor {
                 break;
             } else {
                 try {
-                    final Statement<?> stmt = parser.parse(line);
-                    final String sortedHistogram = displayer.createSortedHistogram(stmt.toString(), stmt.events());
+                    final List<Statement<?>> stmts = parser.parse(line);
+                    final String sortedHistogram = displayer.createSortedHistogram(stmts.toString(), stmts.stream().flatMap(Statement::events));
                     console.printf("%s", sortedHistogram);
                 } catch (RecognitionException re) {
                     console.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());

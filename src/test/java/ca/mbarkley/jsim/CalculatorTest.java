@@ -2,11 +2,13 @@ package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Question;
+import ca.mbarkley.jsim.model.Statement;
 import ca.mbarkley.jsim.prob.Event;
 import org.assertj.core.data.Offset;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static java.util.stream.Collectors.toMap;
@@ -18,84 +20,85 @@ public class CalculatorTest {
 
     @Test
     public void rollLessThanConstant() {
-        final Question question = parser.parseQuestion("d6 < 4");
+        final List<Statement<?>> stmts = parser.parse("d6 < 4");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.5, result.get(true).getProbability(), 0.0001);
     }
 
     @Test
     public void complexRollGreaterThanConstant() {
-        final Question question = parser.parseQuestion("2d6 + 1 > 6");
+        final List<Statement<?>> stmts = parser.parse("2d6 + 1 > 6");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.722, result.get(true).getProbability(), 0.001);
     }
 
     @Test
     public void multipliedRollsGreaterThanConstant() {
-        final Question question = parser.parseQuestion("d4 * d4 > 8");
+        final List<Statement<?>> stmts = parser.parse("d4 * d4 > 8");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.250, result.get(true).getProbability(), 0.001);
     }
 
     @Test
     public void complexRollLessThanComplexRoll() {
-        final Question question = parser.parseQuestion("2d6 + 1 < 2d8 - 4");
+        final List<Statement<?>> stmts = parser.parse("2d6 + 1 < 2d8 - 4");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.20095, result.get(true).getProbability(), 0.00001);
     }
 
     @Test
     public void constantLessThanConstant() {
-        final Question question = parser.parseQuestion("1 < 2");
+        final List<Statement<?>> stmts = parser.parse("1 < 2");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(1.0, result.get(true).getProbability(), 0.00001);
     }
 
     @Test
     public void bigAdditionQuestion() {
-        final Question question = parser.parseQuestion("6d20 + 14d20 > 200");
+        final List<Statement<?>> stmts = parser.parse("6d20 + 14d20 > 200");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.643, result.get(true).getProbability(), 0.001);
     }
 
     @Test
     public void bigMultiRollQuestion() {
-        final Question question = parser.parseQuestion("20d20 > 200");
+        final List<Statement<?>> stmts = parser.parse("20d20 > 200");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.643, result.get(true).getProbability(), 0.001);
     }
 
     @Test
     public void reallyBigMultiRollQuestion() {
-        final Question question = parser.parseQuestion("100d20 > 1000");
+        final List<Statement<?>> stmts = parser.parse("100d20 > 1000");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(0.804, result.get(true).getProbability(), 0.001);
     }
 
     @Test
     public void simpleExpressionResults() {
-        final Expression expression = parser.parseExpression("2d4");
+        final List<Statement<?>> stmts = parser.parse("2d4");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.0001);
         assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0 / 16.0, offset))
@@ -110,12 +113,13 @@ public class CalculatorTest {
 
     @Test
     public void highDiceExpressionResults() {
-        final Expression expression = parser.parseExpression("7d4H1");
+        final List<Statement<?>> stmts = parser.parse("7d4H1");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(0.00006, offset))
@@ -127,12 +131,13 @@ public class CalculatorTest {
 
     @Test
     public void lowDiceExpressionResults() {
-        final Expression expression = parser.parseExpression("7d4L1");
+        final List<Statement<?>> stmts = parser.parse("7d4L1");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(0.00006, offset))
@@ -144,12 +149,13 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithSubtraction() {
-        final Expression expression = parser.parseExpression("2 - 1 + 1");
+        final List<Statement<?>> stmts = parser.parse("2 - 1 + 1");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
@@ -158,12 +164,13 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithMultiplication() {
-        final Expression expression = parser.parseExpression("2 + 1 * 3");
+        final List<Statement<?>> stmts = parser.parse("2 + 1 * 3");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(5, prob -> assertThat(prob).isCloseTo(1.0, offset))
@@ -172,12 +179,13 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithDivision() {
-        final Expression expression = parser.parseExpression("2 + 1 / 3");
+        final List<Statement<?>> stmts = parser.parse("2 + 1 / 3");
 
-        final Map<Integer, Double> result = expression.calculateResults()
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
                                                       .entrySet()
                                                       .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+                                                      .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
@@ -186,12 +194,13 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithDivisionAndMultiplication() {
-        final Expression expression = parser.parseExpression("3 * 1 / 3");
+        final List<Statement<?>> stmts = parser.parse("3 * 1 / 3");
 
-        final Map<Integer, Double> result = expression.calculateResults()
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
                                                       .entrySet()
                                                       .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+                                                      .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(0, prob -> assertThat(prob).isCloseTo(1.0, offset))
@@ -200,12 +209,13 @@ public class CalculatorTest {
 
     @Test
     public void fullBedmas() {
-        final Expression expression = parser.parseExpression("3 * (3 + 1) / 4 * 10");
+        final List<Statement<?>> stmts = parser.parse("3 * (3 + 1) / 4 * 10");
 
-        final Map<Integer, Double> result = expression.calculateResults()
-                                                      .entrySet()
-                                                      .stream()
-                                                      .collect(toMap(Map.Entry::getKey, e -> e.getValue().getProbability()));
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(30, prob -> assertThat(prob).isCloseTo(1.0, offset))
@@ -214,28 +224,37 @@ public class CalculatorTest {
 
     @Test
     public void disjunctive() {
-        final Question question = parser.parseQuestion("d6 = 1 or d6 = 2");
+        final List<Statement<?>> stmts = parser.parse("d6 = 1 or d6 = 2");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(11.0 / 36.0, result.get(true).getProbability(), 0.0001);
     }
 
     @Test
     public void conjunctive() {
-        final Question question = parser.parseQuestion("d6 = 1 and d6 = 2");
+        final List<Statement<?>> stmts = parser.parse("d6 = 1 and d6 = 2");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
         Assert.assertEquals(1.0 / 36.0, result.get(true).getProbability(), 0.0001);
     }
 
     @Test
     public void booleanOrderOfOperations() {
-        final Question question = parser.parseQuestion("d6 = 1 and d6 = 2 or d100 = 1");
+        final List<Statement<?>> stmts = parser.parse("d6 = 1 and d6 = 2 or d100 = 1");
 
-        final Map<Boolean, Event<Boolean>> result = question.calculateResults();
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
-        Assert.assertEquals( 1.0 - ((35.0 / 36.0) * (99.0 / 100.0)), result.get(true).getProbability(), 0.0001);
+        Assert.assertEquals(1.0 - ((35.0 / 36.0) * (99.0 / 100.0)), result.get(true).getProbability(), 0.0001);
+    }
+
+    @Test
+    public void booleanConstantExpression() {
+        final  List<Statement<?>> stmts = parser.parse("true");
+
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
+
+        Assert.assertEquals(1.0, result.get(true).getProbability(), 0.0001);
     }
 }
