@@ -27,8 +27,10 @@ public class ConsoleProcessor {
             } else {
                 try {
                     final List<Expression<?>> stmts = parser.parse(line);
-                    final String sortedHistogram = displayer.createSortedHistogram(stmts.toString(), stmts.stream().flatMap(Expression::events));
-                    console.printf("%s", sortedHistogram);
+                    for (var stmt : stmts) {
+                        final String sortedHistogram = displayer.createSortedHistogram(stmt.toString(), stmt.events());
+                        console.printf("%s", sortedHistogram);
+                    }
                 } catch (RecognitionException re) {
                     console.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());
                 } catch (RuntimeException re) {
