@@ -148,7 +148,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.BinaryBooleanExpression(left, BooleanExpression.Comparator.LT, right);
+        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.LT, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -160,7 +160,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.BinaryBooleanExpression(left, BooleanExpression.Comparator.GT, right);
+        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.GT, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -172,7 +172,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.BinaryBooleanExpression(left, BooleanExpression.Comparator.EQ, right);
+        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.EQ, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -199,7 +199,7 @@ public class ParserTest {
         final IntegerExpression expected = new BinaryOpExpression(
                 new Constant(2),
                 TIMES,
-                new Bracketed(new BinaryOpExpression(
+                new Expression.Bracketed(new BinaryOpExpression(
                         new HomogeneousDicePool(2, 6),
                         PLUS,
                         new Constant(1)

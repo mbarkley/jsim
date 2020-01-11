@@ -16,9 +16,9 @@ public abstract class BooleanExpression extends Expression<Boolean> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpBooleanExpression extends BooleanExpression {
-        BooleanExpression left;
+        Expression<Boolean> left;
         BooleanOperator operator;
-        BooleanExpression right;
+        Expression<Boolean> right;
 
         @Override
         public Stream<Event<Boolean>> events() {
@@ -38,10 +38,10 @@ public abstract class BooleanExpression extends Expression<Boolean> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class BinaryBooleanExpression extends BooleanExpression {
-        IntegerExpression left;
+    public static class ComparisonExpression extends BooleanExpression {
+        Expression<Integer> left;
         Comparator comparator;
-        IntegerExpression right;
+        Expression<Integer> right;
 
         @Override
         public Stream<Event<Boolean>> events() {

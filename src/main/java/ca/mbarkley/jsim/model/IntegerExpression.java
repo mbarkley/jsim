@@ -35,22 +35,6 @@ public abstract class IntegerExpression extends Expression<Integer> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class Bracketed extends IntegerExpression {
-        IntegerExpression subExpression;
-
-        @Override
-        public Stream<Event<Integer>> events() {
-            return subExpression.events();
-        }
-
-        @Override
-        public String toString() {
-            return format("(%s)", subExpression);
-        }
-    }
-
-    @Value
-    @EqualsAndHashCode(callSuper = false)
     public static class HighDice extends IntegerExpression {
         HomogeneousDicePool dicePool;
         int numberOfDice;
@@ -141,9 +125,9 @@ public abstract class IntegerExpression extends Expression<Integer> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpExpression extends IntegerExpression {
-        IntegerExpression left;
+        Expression<Integer> left;
         Operator operator;
-        IntegerExpression right;
+        Expression<Integer> right;
 
         @Override
         public Stream<Event<Integer>> events() {

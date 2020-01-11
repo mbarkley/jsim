@@ -248,6 +248,15 @@ public class CalculatorTest {
     }
 
     @Test
+    public void booleanOrderOfOperationsWithBracketing() {
+        final List<Expression<?>> stmts = parser.parse("d6 = 1 and (d6 = 2 or d100 = 1)");
+
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
+
+        Assert.assertEquals(1.0/6.0 * (1.0 - (5.0/6.0 * 99.0/100.0)), result.get(true).getProbability(), 0.0001);
+    }
+
+    @Test
     public void booleanConstantExpression() {
         final  List<Expression<?>> stmts = parser.parse("true");
 

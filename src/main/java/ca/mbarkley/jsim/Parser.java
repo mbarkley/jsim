@@ -6,7 +6,7 @@ import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.BooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.*;
 import ca.mbarkley.jsim.model.Expression;
-import ca.mbarkley.jsim.model.IntegerExpression;
+import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -69,11 +69,11 @@ public class Parser {
     }
 
     @RequiredArgsConstructor
-    private static class BooleanExpressionVisitor extends JSimBaseVisitor<BooleanExpression> {
+    private static class BooleanExpressionVisitor extends JSimBaseVisitor<Expression<Boolean>> {
         private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
 
         @Override
-        public BooleanExpression visitBooleanExpression(JSimParser.BooleanExpressionContext ctx) {
+        public Expression<Boolean> visitBooleanExpression(JSimParser.BooleanExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.booleanExpression().size() == 2) {
@@ -81,12 +81,12 @@ public class Parser {
                 final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
                                                                 .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
 
-                final BooleanExpression left = visitBooleanExpression(ctx.booleanExpression(0));
-                final BooleanExpression right = visitBooleanExpression(ctx.booleanExpression(1));
+                final Expression<Boolean> left = visitBooleanExpression(ctx.booleanExpression(0));
+                final Expression<Boolean> right = visitBooleanExpression(ctx.booleanExpression(1));
 
                 return new BinaryOpBooleanExpression(left, operator, right);
             } else if (ctx.booleanExpression().size() == 1) {
-                throw new UnsupportedOperationException();
+                return new Bracketed<>(visitBooleanExpression(ctx.booleanExpression(0)));
             } else {
                 return visitBooleanTerm(ctx.booleanTerm());
             }
@@ -97,13 +97,13 @@ public class Parser {
             if (ctx.booleanLiteral() != null) {
                 return visitBooleanLiteral(ctx.booleanLiteral());
             } else {
-                final IntegerExpression left = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(0));
-                final IntegerExpression right = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(1));
+                final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(0));
+                final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(1));
                 final String comparatorText = ctx.getChild(1).getText();
                 final Comparator comparator = Comparator.lookup(comparatorText)
                                                         .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
-                return new BinaryBooleanExpression(left, comparator, right);
+                return new ComparisonExpression(left, comparator, right);
             }
         }
 
@@ -117,16 +117,16 @@ public class Parser {
         }
     }
 
-    private static class ArithmeticExpressionVisitor extends JSimBaseVisitor<IntegerExpression> {
+    private static class ArithmeticExpressionVisitor extends JSimBaseVisitor<Expression<Integer>> {
         @Override
-        public IntegerExpression visitSingleRoll(JSimParser.SingleRollContext ctx) {
+        public Expression<Integer> visitSingleRoll(JSimParser.SingleRollContext ctx) {
             final Token rawNumber = ctx.NUMBER().getSymbol();
             final int dieSides = parseInt(rawNumber.getText());
             return new HomogeneousDicePool(1, dieSides);
         }
 
         @Override
-        public IntegerExpression visitMultiRoll(JSimParser.MultiRollContext ctx) {
+        public Expression<Integer> visitMultiRoll(JSimParser.MultiRollContext ctx) {
             final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
             final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
 
@@ -134,7 +134,7 @@ public class Parser {
         }
 
         @Override
-        public IntegerExpression visitHighRoll(JSimParser.HighRollContext ctx) {
+        public Expression<Integer> visitHighRoll(JSimParser.HighRollContext ctx) {
             final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
             final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
             final int highDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
@@ -144,7 +144,7 @@ public class Parser {
         }
 
         @Override
-        public IntegerExpression visitLowRoll(JSimParser.LowRollContext ctx) {
+        public Expression<Integer> visitLowRoll(JSimParser.LowRollContext ctx) {
             final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
             final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
             final int lowDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
@@ -154,13 +154,13 @@ public class Parser {
         }
 
         @Override
-        public IntegerExpression visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
+        public Expression<Integer> visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.arithmeticExpression().size() == 2) {
                 return visitBinaryExpression(ctx);
             } else if (ctx.arithmeticExpression().size() == 1) {
-                return new Bracketed(visitArithmeticExpression(ctx.arithmeticExpression(0)));
+                return new Bracketed<>(visitArithmeticExpression(ctx.arithmeticExpression(0)));
             } else if (ctx.arithmeticTerm() != null) {
                 return visitArithmeticTerm(ctx.arithmeticTerm());
             } else {
@@ -169,17 +169,16 @@ public class Parser {
         }
 
         @Override
-        public IntegerExpression visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
+        public Expression<Integer> visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
             return visitChildren(ctx);
         }
 
-        private IntegerExpression visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
-            final IntegerExpression left = visitArithmeticExpression(ctx.arithmeticExpression(0));
-            final IntegerExpression right = visitArithmeticExpression(ctx.arithmeticExpression(1));
+        private Expression<Integer> visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
+            final Expression<Integer> left = visitArithmeticExpression(ctx.arithmeticExpression(0));
+            final Expression<Integer> right = visitArithmeticExpression(ctx.arithmeticExpression(1));
             final Operator sign = getOperator(ctx);
-            final BinaryOpExpression combined = new BinaryOpExpression(left, sign, right);
 
-            return combined;
+            return new BinaryOpExpression(left, sign, right);
         }
 
         private Operator getOperator(JSimParser.ArithmeticExpressionContext ctx) {
@@ -189,12 +188,12 @@ public class Parser {
         }
 
         @Override
-        public IntegerExpression visitNumberLiteral(JSimParser.NumberLiteralContext ctx) {
+        public Expression<Integer> visitNumberLiteral(JSimParser.NumberLiteralContext ctx) {
             return new Constant(parseInt(ctx.NUMBER().getText()));
         }
 
         @Override
-        protected IntegerExpression aggregateResult(IntegerExpression aggregate, IntegerExpression nextResult) {
+        protected Expression<Integer> aggregateResult(Expression<Integer> aggregate, Expression<Integer> nextResult) {
             if (aggregate == null) {
                 return nextResult;
             } else if (nextResult == null) {
