@@ -2,8 +2,7 @@ package ca.mbarkley.jsim.cli;
 
 import ca.mbarkley.jsim.Displayer;
 import ca.mbarkley.jsim.Parser;
-import ca.mbarkley.jsim.model.Statement;
-import lombok.RequiredArgsConstructor;
+import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 
 import java.io.Console;
@@ -27,8 +26,8 @@ public class ConsoleProcessor {
                 break;
             } else {
                 try {
-                    final List<Statement<?>> stmts = parser.parse(line);
-                    final String sortedHistogram = displayer.createSortedHistogram(stmts.toString(), stmts.stream().flatMap(Statement::events));
+                    final List<Expression<?>> stmts = parser.parse(line);
+                    final String sortedHistogram = displayer.createSortedHistogram(stmts.toString(), stmts.stream().flatMap(Expression::events));
                     console.printf("%s", sortedHistogram);
                 } catch (RecognitionException re) {
                     console.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());

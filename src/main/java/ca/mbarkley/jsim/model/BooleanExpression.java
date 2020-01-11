@@ -11,14 +11,14 @@ import java.util.stream.Stream;
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
 import static java.lang.String.format;
 
-public abstract class Question extends Statement<Boolean> {
+public abstract class BooleanExpression extends Expression<Boolean> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class BinaryOpQuestion extends Question {
-        Question left;
+    public static class BinaryOpBooleanExpression extends BooleanExpression {
+        BooleanExpression left;
         BooleanOperator operator;
-        Question right;
+        BooleanExpression right;
 
         @Override
         public Stream<Event<Boolean>> events() {
@@ -38,10 +38,10 @@ public abstract class Question extends Statement<Boolean> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class BinaryBooleanExpression extends Question {
-        Expression left;
+    public static class BinaryBooleanExpression extends BooleanExpression {
+        IntegerExpression left;
         Comparator comparator;
-        Expression right;
+        IntegerExpression right;
 
         @Override
         public Stream<Event<Boolean>> events() {
@@ -62,7 +62,7 @@ public abstract class Question extends Statement<Boolean> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class BooleanConstant extends Question {
+    public static class BooleanConstant extends BooleanExpression {
         public static BooleanConstant TRUE = new BooleanConstant(true);
         public static BooleanConstant FALSE = new BooleanConstant(false);
 

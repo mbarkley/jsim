@@ -1,15 +1,20 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
+import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperator;
+import ca.mbarkley.jsim.model.IntegerExpression.BinaryOpExpression;
+import ca.mbarkley.jsim.model.IntegerExpression.Operator;
+
 import java.util.Comparator;
 import java.util.Optional;
 
 /**
  * @param <O> Type of operator in binary statement type {@code R}
- * @param <S> Common super-type of binary statement components (ex. {@link Expression}, {@link Question})
+ * @param <S> Common super-type of binary statement components (ex. {@link IntegerExpression}, {@link BooleanExpression})
  * @param <R> A sub-type of {@code S} that is a binary statement combining two statements of type {@code S}
  *           with an operator of type {@code O}.
  */
-public interface PrecedenceRotator<O, S extends Statement<?>, R extends S> extends Comparator<O> {
+public interface PrecedenceRotator<O, S extends Expression<?>, R extends S> extends Comparator<O> {
     Optional<R> asRotatable(S stmt);
     S left(R stmt);
     S right(R stmt);
@@ -55,84 +60,84 @@ public interface PrecedenceRotator<O, S extends Statement<?>, R extends S> exten
         }
     }
 
-    static PrecedenceRotator<Expression.Operator, Expression, Expression.BinaryOpExpression> binaryOpExpressionRotator() {
+    static PrecedenceRotator<Operator, IntegerExpression, BinaryOpExpression> binaryOpExpressionRotator() {
         return new BinaryOpExpressionRotator();
     }
 
-    static PrecedenceRotator<Question.BooleanOperator, Question, Question.BinaryOpQuestion> binaryOpQuestionRotator() {
+    static PrecedenceRotator<BooleanOperator, BooleanExpression, BinaryOpBooleanExpression> binaryOpQuestionRotator() {
         return new BinaryOpQuestionRotator();
     }
 }
 
-class BinaryOpExpressionRotator implements PrecedenceRotator<Expression.Operator, Expression, Expression.BinaryOpExpression> {
+class BinaryOpExpressionRotator implements PrecedenceRotator<Operator, IntegerExpression, BinaryOpExpression> {
 
     @Override
-    public Optional<Expression.BinaryOpExpression> asRotatable(Expression stmt) {
-        if (stmt instanceof Expression.BinaryOpExpression) {
-            return Optional.of((Expression.BinaryOpExpression) stmt);
+    public Optional<BinaryOpExpression> asRotatable(IntegerExpression stmt) {
+        if (stmt instanceof BinaryOpExpression) {
+            return Optional.of((BinaryOpExpression) stmt);
         } else {
             return Optional.empty();
         }
     }
 
     @Override
-    public Expression left(Expression.BinaryOpExpression stmt) {
+    public IntegerExpression left(BinaryOpExpression stmt) {
         return stmt.getLeft();
     }
 
     @Override
-    public Expression right(Expression.BinaryOpExpression stmt) {
+    public IntegerExpression right(BinaryOpExpression stmt) {
         return stmt.getRight();
     }
 
     @Override
-    public Expression.Operator operator(Expression.BinaryOpExpression stmt) {
+    public Operator operator(BinaryOpExpression stmt) {
         return stmt.getOperator();
     }
 
     @Override
-    public Expression.BinaryOpExpression recombine(Expression left, Expression.Operator op, Expression right) {
-        return new Expression.BinaryOpExpression(left, op, right);
+    public BinaryOpExpression recombine(IntegerExpression left, Operator op, IntegerExpression right) {
+        return new BinaryOpExpression(left, op, right);
     }
 
     @Override
-    public int compare(Expression.Operator o1, Expression.Operator o2) {
+    public int compare(Operator o1, Operator o2) {
         return o1.getPrecedent() - o2.getPrecedent();
     }
 }
 
-class BinaryOpQuestionRotator implements PrecedenceRotator<Question.BooleanOperator, Question, Question.BinaryOpQuestion> {
+class BinaryOpQuestionRotator implements PrecedenceRotator<BooleanOperator, BooleanExpression, BinaryOpBooleanExpression> {
     @Override
-    public Optional<Question.BinaryOpQuestion> asRotatable(Question stmt) {
-        if (stmt instanceof Question.BinaryOpQuestion) {
-            return Optional.of((Question.BinaryOpQuestion) stmt);
+    public Optional<BinaryOpBooleanExpression> asRotatable(BooleanExpression stmt) {
+        if (stmt instanceof BinaryOpBooleanExpression) {
+            return Optional.of((BinaryOpBooleanExpression) stmt);
         } else {
             return Optional.empty();
         }
     }
 
     @Override
-    public Question left(Question.BinaryOpQuestion stmt) {
+    public BooleanExpression left(BinaryOpBooleanExpression stmt) {
         return stmt.getLeft();
     }
 
     @Override
-    public Question right(Question.BinaryOpQuestion stmt) {
+    public BooleanExpression right(BinaryOpBooleanExpression stmt) {
         return stmt.getRight();
     }
 
     @Override
-    public Question.BooleanOperator operator(Question.BinaryOpQuestion stmt) {
+    public BooleanOperator operator(BinaryOpBooleanExpression stmt) {
         return stmt.getOperator();
     }
 
     @Override
-    public Question.BinaryOpQuestion recombine(Question left, Question.BooleanOperator op, Question right) {
-        return new Question.BinaryOpQuestion(left, op, right);
+    public BinaryOpBooleanExpression recombine(BooleanExpression left, BooleanOperator op, BooleanExpression right) {
+        return new BinaryOpBooleanExpression(left, op, right);
     }
 
     @Override
-    public int compare(Question.BooleanOperator o1, Question.BooleanOperator o2) {
+    public int compare(BooleanOperator o1, BooleanOperator o2) {
         return o1.getPrecedent() - o2.getPrecedent();
     }
 }

@@ -2,8 +2,7 @@ package ca.mbarkley.jsim.cli;
 
 import ca.mbarkley.jsim.Displayer;
 import ca.mbarkley.jsim.Parser;
-import ca.mbarkley.jsim.model.Statement;
-import lombok.RequiredArgsConstructor;
+import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 import org.apache.commons.io.IOUtils;
 
@@ -24,7 +23,7 @@ public class BatchProcessor {
 
     public void process(String input) {
         try {
-            final List<Statement<?>> stmts = parser.parse(input);
+            final List<Expression<?>> stmts = parser.parse(input);
             for (var stmt : stmts) {
                 final String cleanInput = stmt.toString();
                 final String sortedHistogram = displayer.createSortedHistogram(cleanInput, stmt.events());
