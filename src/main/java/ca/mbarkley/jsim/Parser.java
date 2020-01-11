@@ -5,10 +5,9 @@ import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.BooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.*;
+import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.IntegerExpression;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
-import ca.mbarkley.jsim.model.PrecedenceRotator;
-import ca.mbarkley.jsim.model.Expression;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -77,19 +76,19 @@ public class Parser {
         public BooleanExpression visitBooleanExpression(JSimParser.BooleanExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
-            } else if (ctx.booleanExpression() == null) {
-                return visitBooleanTerm(ctx.booleanTerm());
-            } else {
+            } else if (ctx.booleanExpression().size() == 2) {
                 final String booleanOperatorText = ctx.getChild(1).getText();
                 final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
                                                                 .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
-                final PrecedenceRotator<BooleanOperator, BooleanExpression, BinaryOpBooleanExpression> rotator = PrecedenceRotator.binaryOpQuestionRotator();
-                final JSimParser.BooleanTermContext left = ctx.booleanTerm();
-                final BooleanExpression right = visitBooleanExpression(ctx.booleanExpression());
 
-                final BinaryOpBooleanExpression question = new BinaryOpBooleanExpression(visitBooleanTerm(left), operator, right);
+                final BooleanExpression left = visitBooleanExpression(ctx.booleanExpression(0));
+                final BooleanExpression right = visitBooleanExpression(ctx.booleanExpression(1));
 
-                return rotator.maybeRotate(question).orElse(question);
+                return new BinaryOpBooleanExpression(left, operator, right);
+            } else if (ctx.booleanExpression().size() == 1) {
+                throw new UnsupportedOperationException();
+            } else {
+                return visitBooleanTerm(ctx.booleanTerm());
             }
         }
 
@@ -156,12 +155,14 @@ public class Parser {
 
         @Override
         public IntegerExpression visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
-            if (ctx.arithmeticExpression() != null) {
-                return visitBinaryExpression(ctx);
-            } else if (ctx.arithmeticTerm() != null && ctx.arithmeticExpression() == null) {
-                return visitArithmeticTerm(ctx.arithmeticTerm());
-            } else if (ctx.exception != null) {
+            if (ctx.exception != null) {
                 throw ctx.exception;
+            } else if (ctx.arithmeticExpression().size() == 2) {
+                return visitBinaryExpression(ctx);
+            } else if (ctx.arithmeticExpression().size() == 1) {
+                return new Bracketed(visitArithmeticExpression(ctx.arithmeticExpression(0)));
+            } else if (ctx.arithmeticTerm() != null) {
+                return visitArithmeticTerm(ctx.arithmeticTerm());
             } else {
                 throw new IllegalStateException();
             }
@@ -169,21 +170,16 @@ public class Parser {
 
         @Override
         public IntegerExpression visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
-            if (ctx.arithmeticExpression() != null) {
-                return new Bracketed(visitArithmeticExpression(ctx.arithmeticExpression()));
-            } else {
-                return visitChildren(ctx);
-            }
+            return visitChildren(ctx);
         }
 
         private IntegerExpression visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
-            final IntegerExpression left = visitArithmeticTerm(ctx.arithmeticTerm());
-            final IntegerExpression right = visitArithmeticExpression(ctx.arithmeticExpression());
+            final IntegerExpression left = visitArithmeticExpression(ctx.arithmeticExpression(0));
+            final IntegerExpression right = visitArithmeticExpression(ctx.arithmeticExpression(1));
             final Operator sign = getOperator(ctx);
             final BinaryOpExpression combined = new BinaryOpExpression(left, sign, right);
-            final PrecedenceRotator<Operator, IntegerExpression, BinaryOpExpression> rotator = PrecedenceRotator.binaryOpExpressionRotator();
 
-            return rotator.maybeRotate(combined).orElse(combined);
+            return combined;
         }
 
         private Operator getOperator(JSimParser.ArithmeticExpressionContext ctx) {

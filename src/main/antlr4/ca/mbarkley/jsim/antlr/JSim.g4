@@ -49,8 +49,9 @@ jsim : statement? (TERMINATOR+ statement)* TERMINATOR* EOF;
 statement : arithmeticExpression |
             booleanExpression;
 
-booleanExpression : booleanTerm AND booleanExpression |
-                    booleanTerm OR booleanExpression |
+booleanExpression : LB booleanExpression RB |
+                    booleanExpression AND booleanExpression |
+                    booleanExpression OR booleanExpression |
                     booleanTerm;
 
 booleanTerm : arithmeticExpression LT arithmeticExpression |
@@ -58,14 +59,13 @@ booleanTerm : arithmeticExpression LT arithmeticExpression |
               arithmeticExpression EQ arithmeticExpression |
               booleanLiteral;
 
-arithmeticExpression : arithmeticTerm TIMES arithmeticExpression |
-                       arithmeticTerm DIVIDE arithmeticExpression |
-                       arithmeticTerm PLUS arithmeticExpression |
-                       arithmeticTerm MINUS arithmeticExpression |
+arithmeticExpression : LB arithmeticExpression RB |
+                       arithmeticExpression DIVIDE arithmeticExpression |
+                       arithmeticExpression TIMES arithmeticExpression |
+                       arithmeticExpression (PLUS|MINUS) arithmeticExpression |
                        arithmeticTerm;
 
-arithmeticTerm : LB arithmeticExpression RB |
-                 numberLiteral |
+arithmeticTerm : numberLiteral |
                  singleRoll |
                  multiRoll |
                  highRoll |
