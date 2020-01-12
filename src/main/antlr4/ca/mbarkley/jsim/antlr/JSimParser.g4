@@ -19,12 +19,14 @@ diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 diceSideDeclaration : NUMBER | TRUE | FALSE;
 
 expression : IDENTIFIER |
+             SYMBOL |
              arithmeticExpression |
              booleanExpression;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
                     booleanExpression OR booleanExpression |
+                    booleanExpression EQ booleanExpression |
                     comparison;
 
 comparison : arithmeticExpression LT arithmeticExpression |

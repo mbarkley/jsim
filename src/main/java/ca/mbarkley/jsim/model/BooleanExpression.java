@@ -2,9 +2,9 @@ package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.Value;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -22,7 +22,7 @@ public abstract class BooleanExpression extends Expression<Boolean> {
     @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpBooleanExpression extends BooleanExpression {
         Expression<Boolean> left;
-        BooleanOperator operator;
+        BinaryOperator<Boolean, Boolean> operator;
         Expression<Boolean> right;
 
         @Override
@@ -37,106 +37,30 @@ public abstract class BooleanExpression extends Expression<Boolean> {
 
         @Override
         public String toString() {
-            return format("%s %s %s", left, operator, right);
-        }
-    }
-
-    @Value
-    @EqualsAndHashCode(callSuper = false)
-    public static class ComparisonExpression extends BooleanExpression {
-        Expression<Integer> left;
-        Comparator comparator;
-        Expression<Integer> right;
-
-        @Override
-        public Stream<Event<Boolean>> events() {
-            final Stream<Event<Integer>> left = getLeft().events();
-            final Stream<Event<Integer>> right = getRight().events();
-
-            return productOfIndependent(left,
-                                        right,
-                                        comparator::evaluate);
-        }
-
-        @Override
-        public String toString() {
-            return format("%s %s %s", left, comparator, right);
+            return format("%s %s %s", left, operator.getSymbol(), right);
         }
     }
 
     public static Constant<Boolean> TRUE = new Constant<>(true);
     public static Constant<Boolean> FALSE = new Constant<>(false);
 
-    public enum BooleanOperator implements HasSymbol<BooleanOperator> {
-        AND("and", 1) {
-            @Override
-            public boolean evaluate(boolean left, boolean right) {
-                return left && right;
-            }
-        },
-        OR("or", 0) {
-            @Override
-            public boolean evaluate(boolean left, boolean right) {
-                return left || right;
-            }
-        };
+    public interface BooleanOperators {
+        public static final BinaryOperator<Boolean, Boolean> equality = BinaryOperator.equality(Boolean.class);
+        public static final BinaryOperator<Boolean, Boolean> and = BinaryOperator.create(Boolean.class, "and", (l, r) -> l && r);
+        public static final BinaryOperator<Boolean, Boolean> or = BinaryOperator.create(Boolean.class, "or", (l, r) -> l || r);
 
-        @Getter
-        private final String symbol;
-        @Getter
-        private final int precedent;
-
-        BooleanOperator(String symbol, int precedent) {
-            this.symbol = symbol;
-            this.precedent = precedent;
-        }
-
-        public abstract boolean evaluate(boolean left, boolean right);
-
-        @Override
-        public String toString() {
-            return symbol;
-        }
-
-        public static Optional<BooleanOperator> lookup(String symbol) {
-            return HasSymbol.lookup(symbol, values());
+        public static Optional<BinaryOperator<Boolean, Boolean>> lookup(String symbol) {
+            return HasSymbol.lookup(symbol, List.of(equality, and, or));
         }
     }
 
-    public enum Comparator implements HasSymbol<Comparator> {
-        LT("<") {
-            @Override
-            public boolean evaluate(int left, int right) {
-                return left < right;
-            }
-        }, GT(">") {
-            @Override
-            public boolean evaluate(int left, int right) {
-                return left > right;
-            }
-        }, EQ("=") {
-            @Override
-            public boolean evaluate(int left, int right) {
-                return left == right;
-            }
-        };
+    public static class IntegerComparisons {
+        public static final BinaryOperator<Integer, Boolean> equality = BinaryOperator.equality(Integer.class);
+        public static final BinaryOperator<Integer, Boolean> lessThan = BinaryOperator.create(Integer.class, "<", (l, r) -> l < r);
+        public static final BinaryOperator<Integer, Boolean> greaterThan = BinaryOperator.create(Integer.class, ">", (l, r) -> l > r);
 
-        @Getter
-        private final String symbol;
-
-        Comparator(String symbol) {
-            this.symbol = symbol;
-        }
-
-        @Override
-        public String toString() {
-            return symbol;
-        }
-
-        public abstract boolean evaluate(int left, int right);
-
-        public static Optional<Comparator> lookup(String symbol) {
-            return HasSymbol.lookup(symbol, values());
+        public static Optional<BinaryOperator<Integer, Boolean>> lookup(String symbol) {
+            return HasSymbol.lookup(symbol, List.of(equality, lessThan, greaterThan));
         }
     }
 }

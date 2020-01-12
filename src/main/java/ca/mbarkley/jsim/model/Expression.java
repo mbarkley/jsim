@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -80,6 +81,34 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Class<T> getType() {
             return type;
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class ComparisonExpression<I extends Comparable<I>> extends Expression<Boolean> {
+        Expression<I> left;
+        BinaryOperator<I, Boolean> comparator;
+        Expression<I> right;
+
+        @Override
+        public Stream<Event<Boolean>> events() {
+            final Stream<Event<I>> left = getLeft().events();
+            final Stream<Event<I>> right = getRight().events();
+
+            return productOfIndependent(left,
+                                        right,
+                                        comparator::evaluate);
+        }
+
+        @Override
+        public Class<Boolean> getType() {
+            return Boolean.class;
+        }
+
+        @Override
+        public String toString() {
+            return format("%s %s %s", left, comparator.getSymbol(), right);
         }
     }
 }

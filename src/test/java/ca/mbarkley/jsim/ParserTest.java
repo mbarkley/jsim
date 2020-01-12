@@ -1,10 +1,14 @@
 package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.eval.Parser;
-import ca.mbarkley.jsim.model.BooleanExpression;
+import ca.mbarkley.jsim.model.BinaryOperator;
+import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
+import ca.mbarkley.jsim.model.Expression;
+import ca.mbarkley.jsim.model.Expression.Bracketed;
+import ca.mbarkley.jsim.model.Expression.ComparisonExpression;
+import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.IntegerExpression;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
-import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.junit.Test;
@@ -80,7 +84,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Expression.Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant<>(1)));
     }
 
     @Test
@@ -89,7 +93,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Expression.Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant<>(1)));
     }
 
     @Test
@@ -98,7 +102,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Expression.Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant<>(1)));
     }
 
     @Test
@@ -107,7 +111,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Expression.Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant<>(1)));
     }
 
     @Test
@@ -116,7 +120,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Expression.Constant(2)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant<>(2)));
     }
 
     @Test
@@ -125,7 +129,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Expression.Constant(2)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant<>(2)));
     }
 
     @Test
@@ -137,7 +141,7 @@ public class ParserTest {
         final BinaryOpExpression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
                 PLUS,
-                new Expression.Constant(1));
+                new Constant<>(1));
         assertThat(result).containsExactly(expected);
     }
 
@@ -149,7 +153,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.LT, right);
+        final Expression<Boolean> expected = new ComparisonExpression<>(left, IntegerComparisons.lessThan, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -161,7 +165,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.GT, right);
+        final Expression<Boolean> expected = new ComparisonExpression<>(left, IntegerComparisons.greaterThan, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -173,7 +177,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final BooleanExpression expected = new BooleanExpression.ComparisonExpression(left, BooleanExpression.Comparator.EQ, right);
+        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.equality(Integer.class), right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -184,9 +188,9 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final IntegerExpression expected = new BinaryOpExpression(
-                new BinaryOpExpression(new Expression.Constant(2), Operator.MINUS, new Expression.Constant(1)),
+                new BinaryOpExpression(new Constant<>(2), Operator.MINUS, new Constant<>(1)),
                 PLUS,
-                new Expression.Constant(1)
+                new Constant<>(1)
         );
         assertThat(result).containsExactly(expected);
     }
@@ -198,12 +202,12 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final IntegerExpression expected = new BinaryOpExpression(
-                new Expression.Constant(2),
+                new Constant<>(2),
                 TIMES,
-                new Expression.Bracketed(new BinaryOpExpression(
+                new Bracketed<>(new BinaryOpExpression(
                         new HomogeneousDicePool(2, 6),
                         PLUS,
-                        new Expression.Constant(1)
+                        new Constant<>(1)
                 ))
         );
         assertThat(result).containsExactly(expected);

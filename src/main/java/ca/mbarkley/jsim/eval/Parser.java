@@ -3,13 +3,14 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
+import ca.mbarkley.jsim.model.BinaryOperator;
 import ca.mbarkley.jsim.model.BooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
-import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperator;
-import ca.mbarkley.jsim.model.BooleanExpression.Comparator;
-import ca.mbarkley.jsim.model.BooleanExpression.ComparisonExpression;
+import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
+import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
+import ca.mbarkley.jsim.model.Expression.ComparisonExpression;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Expression.EventList;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
@@ -24,7 +25,6 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.*;
@@ -37,7 +37,7 @@ public class Parser {
     }
 
     public Evaluation parse(Context evalCtx, String expression) {
-        final ANTLRInputStream is = new ANTLRInputStream(expression);
+        @SuppressWarnings("deprecation") final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
@@ -150,7 +150,7 @@ public class Parser {
                                                           .map(e -> new Event<>(e.getKey(), e.getValue()))
                                                           .collect(toList());
 
-                //noinspection unchecked
+                //noinspection unchecked,rawtypes
                 return new EventList(type, events);
             }
         }
@@ -198,8 +198,8 @@ public class Parser {
                 throw ctx.exception;
             } else if (ctx.booleanExpression().size() == 2) {
                 final String booleanOperatorText = ctx.getChild(1).getText();
-                final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
-                                                                .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
+                final BinaryOperator<Boolean, Boolean> operator = BooleanOperators.lookup(booleanOperatorText)
+                                                                                  .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
 
                 final Expression<Boolean> left = visitBooleanExpression(evalCtx, ctx.booleanExpression(0));
                 final Expression<Boolean> right = visitBooleanExpression(evalCtx, ctx.booleanExpression(1));
@@ -219,10 +219,10 @@ public class Parser {
                 final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
                 final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
                 final String comparatorText = ctx.getChild(1).getText();
-                final Comparator comparator = Comparator.lookup(comparatorText)
-                                                        .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
+                final BinaryOperator<Integer, Boolean> comparator = IntegerComparisons.lookup(comparatorText)
+                                                                                      .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
-                return new ComparisonExpression(left, comparator, right);
+                return new ComparisonExpression<>(left, comparator, right);
             }
         }
 
@@ -259,7 +259,7 @@ public class Parser {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.NUMBER() != null) {
-                return new Constant(Integer.parseInt(ctx.NUMBER().getText()));
+                return new Constant<>(Integer.parseInt(ctx.NUMBER().getText()));
             } else if (ctx.ROLL() != null) {
                 final Matcher matcher = ROLL.matcher(ctx.ROLL().getText());
                 if (matcher.matches()) {
@@ -309,6 +309,7 @@ public class Parser {
         if (expression != null) {
             final Class<?> type = expression.getType();
             if (expectedType.equals(type)) {
+                //noinspection unchecked
                 return (Expression<T>) expression;
             } else {
                 throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getSimpleName(), type.getSimpleName()));
