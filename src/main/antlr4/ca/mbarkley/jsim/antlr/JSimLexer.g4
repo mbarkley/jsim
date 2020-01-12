@@ -9,13 +9,6 @@ TRUE : 'true';
 
 FALSE : 'false';
 
-// Dice pool symbols
-D : ('d' | 'D');
-
-H : ('h' | 'H');
-
-L : ('l' | 'L');
-
 // Arithmetic symbols
 TIMES : '*';
 
@@ -42,3 +35,12 @@ AND : 'and';
 OR : 'or';
 
 TERMINATOR : '\n' | ';';
+
+// Dice pool symbols
+fragment D : ('d' | 'D');
+
+fragment H : ('h' | 'H');
+
+fragment L : ('l' | 'L');
+
+ROLL : NUMBER? D NUMBER ((H|L) NUMBER)?;

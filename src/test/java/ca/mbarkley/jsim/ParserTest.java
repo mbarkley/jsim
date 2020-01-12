@@ -334,7 +334,7 @@ public class ParserTest {
             assertThat(re.getOffendingToken()).extracting(Token::getStartIndex)
                                               .isEqualTo(4);
             assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
-                                              .isEqualTo(4);
+                                              .isEqualTo(5);
         }
     }
 }

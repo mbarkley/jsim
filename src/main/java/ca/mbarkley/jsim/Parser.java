@@ -10,17 +10,21 @@ import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 public class Parser {
+    private static final Pattern ROLL = Pattern.compile("(\\d+)?[dD](\\d+)(?:([HhLl])(\\d+))?");
+
     public List<Expression<?>> parse(String expression) throws RecognitionException {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
@@ -28,7 +32,8 @@ public class Parser {
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
         final JSimParser parser = new JSimParser(tokenStream);
         parser.removeErrorListeners();
-        final JSimParser.JsimContext ctx = parser.jsim();
+        parser.setErrorHandler(new BailErrorStrategy());
+        final JSimParser.JsimContext ctx = runParser(parser);
 
         if (ctx.exception != null) {
             throw ctx.exception;
@@ -41,6 +46,20 @@ public class Parser {
         return visitor.visit(ctx);
     }
 
+    JSimParser.JsimContext runParser(JSimParser parser) throws RecognitionException {
+        try {
+            return parser.jsim();
+        } catch (ParseCancellationException pce) {
+            try {
+                throw pce.getCause();
+            } catch (RecognitionException re) {
+                throw re;
+            } catch (Throwable t) {
+                throw pce;
+            }
+        }
+    }
+
     @RequiredArgsConstructor
     private static class StatementVisitor extends JSimParserBaseVisitor<List<Expression<?>>> {
         private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
@@ -48,10 +67,14 @@ public class Parser {
 
         @Override
         public List<Expression<?>> visitJsim(JSimParser.JsimContext ctx) {
-            return ctx.statement()
-                      .stream()
-                      .flatMap(stmt -> visitStatement(stmt).stream())
-                      .collect(toList());
+            if (ctx.exception != null) {
+                throw ctx.exception;
+            } else {
+                return ctx.statement()
+                          .stream()
+                          .flatMap(stmt -> visitStatement(stmt).stream())
+                          .collect(toList());
+            }
         }
 
         @Override
@@ -119,41 +142,6 @@ public class Parser {
 
     private static class ArithmeticExpressionVisitor extends JSimParserBaseVisitor<Expression<Integer>> {
         @Override
-        public Expression<Integer> visitSingleRoll(JSimParser.SingleRollContext ctx) {
-            final Token rawNumber = ctx.NUMBER().getSymbol();
-            final int dieSides = parseInt(rawNumber.getText());
-            return new HomogeneousDicePool(1, dieSides);
-        }
-
-        @Override
-        public Expression<Integer> visitMultiRoll(JSimParser.MultiRollContext ctx) {
-            final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
-            final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
-
-            return new HomogeneousDicePool(diceNumber, diceSides);
-        }
-
-        @Override
-        public Expression<Integer> visitHighRoll(JSimParser.HighRollContext ctx) {
-            final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
-            final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
-            final int highDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
-            final HomogeneousDicePool dicePool = new HomogeneousDicePool(diceNumber, diceSides);
-
-            return new HighDice(dicePool, highDice);
-        }
-
-        @Override
-        public Expression<Integer> visitLowRoll(JSimParser.LowRollContext ctx) {
-            final int diceNumber = parseInt(ctx.NUMBER(0).getSymbol().getText());
-            final int diceSides = parseInt(ctx.NUMBER(1).getSymbol().getText());
-            final int lowDice = parseInt(ctx.NUMBER(2).getSymbol().getText());
-            final HomogeneousDicePool dicePool = new HomogeneousDicePool(diceNumber, diceSides);
-
-            return new LowDice(dicePool, lowDice);
-        }
-
-        @Override
         public Expression<Integer> visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
@@ -170,7 +158,33 @@ public class Parser {
 
         @Override
         public Expression<Integer> visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
-            return visitChildren(ctx);
+            if (ctx.exception != null) {
+                throw ctx.exception;
+            } else if (ctx.NUMBER() != null) {
+                return new Constant(Integer.parseInt(ctx.NUMBER().getText()));
+            } else if (ctx.ROLL() != null) {
+                final Matcher matcher = ROLL.matcher(ctx.ROLL().getText());
+                if (matcher.matches()) {
+                    final int numberOfDice = matcher.group(1) == null ?
+                            1 :
+                            Integer.parseInt(matcher.group(1));
+                    final int numberOfSides = Integer.parseInt(matcher.group(2));
+                    if (matcher.group(3) == null) {
+                        return new HomogeneousDicePool(numberOfDice, numberOfSides);
+                    } else {
+                        final int maxOrMinDiceNumber = Integer.parseInt(matcher.group(4));
+                        if (matcher.group(3).equalsIgnoreCase("L")) {
+                            return new LowDice(new HomogeneousDicePool(numberOfDice, numberOfSides), maxOrMinDiceNumber);
+                        } else if (matcher.group(3).equalsIgnoreCase("H")) {
+                            return new HighDice(new HomogeneousDicePool(numberOfDice, numberOfSides), maxOrMinDiceNumber);
+                        }
+                    }
+                }
+
+                throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
+            } else {
+                throw new IllegalStateException(ctx.toString());
+            }
         }
 
         private Expression<Integer> visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
@@ -185,11 +199,6 @@ public class Parser {
             final String operatorText = ctx.getChild(1).getText();
             return Operator.lookup(operatorText)
                            .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));
-        }
-
-        @Override
-        public Expression<Integer> visitNumberLiteral(JSimParser.NumberLiteralContext ctx) {
-            return new Constant(parseInt(ctx.NUMBER().getText()));
         }
 
         @Override

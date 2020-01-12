@@ -26,20 +26,6 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
                        arithmeticTerm;
 
-arithmeticTerm : numberLiteral |
-                 singleRoll |
-                 multiRoll |
-                 highRoll |
-                 lowRoll;
+arithmeticTerm : NUMBER | ROLL;
 
 booleanLiteral : TRUE | FALSE;
-
-numberLiteral : NUMBER;
-
-singleRoll : D NUMBER;
-
-multiRoll : NUMBER D NUMBER;
-
-highRoll : NUMBER D NUMBER H NUMBER;
-
-lowRoll : NUMBER D NUMBER L NUMBER;
