@@ -197,6 +197,13 @@ public class Parser {
         public Expression<Boolean> visitBooleanExpression(Context evalCtx, JSimParser.BooleanExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
+            } else if (ctx.booleanTerm() != null) {
+                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
+            } else if (ctx.symbolTerm().size() == 2) {
+                final Expression<String> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
+                final Expression<String> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
+
+                return new ComparisonExpression<>(left, BinaryOperator.equality(String.class), right);
             } else if (ctx.booleanExpression().size() == 2) {
                 final String booleanOperatorText = ctx.getChild(1).getText();
                 final BinaryOperator<Boolean, Boolean> operator = BooleanOperators.lookup(booleanOperatorText)
@@ -209,14 +216,12 @@ public class Parser {
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
             } else {
-                return visitComparison(evalCtx, ctx.comparison());
+                return visitArithmeticComparison(evalCtx, ctx.arithmeticComparison());
             }
         }
 
-        public Expression<Boolean> visitComparison(Context evalCtx, JSimParser.ComparisonContext ctx) {
-            if (ctx.booleanTerm() != null) {
-                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
-            } else if (ctx.arithmeticExpression().size() == 2) {
+        public Expression<Boolean> visitArithmeticComparison(Context evalCtx, JSimParser.ArithmeticComparisonContext ctx) {
+            if (ctx.arithmeticExpression().size() == 2) {
                 final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
                 final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
                 final String comparatorText = ctx.getChild(1).getText();
@@ -224,11 +229,6 @@ public class Parser {
                                                                                       .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
                 return new ComparisonExpression<>(left, comparator, right);
-            } else if (ctx.symbolTerm().size() == 2) {
-                final Expression<String> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
-                final Expression<String> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
-
-                return new ComparisonExpression<>(left, BinaryOperator.equality(String.class), right);
             } else {
                 throw new IllegalStateException(ctx.getText());
             }

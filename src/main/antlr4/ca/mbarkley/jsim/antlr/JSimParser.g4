@@ -27,13 +27,13 @@ booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
                     booleanExpression OR booleanExpression |
                     booleanExpression EQ booleanExpression |
-                    comparison;
+                    symbolTerm EQ symbolTerm |
+                    arithmeticComparison |
+                    booleanTerm;
 
-comparison : arithmeticExpression LT arithmeticExpression |
-             arithmeticExpression GT arithmeticExpression |
-             arithmeticExpression EQ arithmeticExpression |
-             symbolTerm EQ symbolTerm |
-             booleanTerm;
+arithmeticComparison : arithmeticExpression LT arithmeticExpression |
+                       arithmeticExpression GT arithmeticExpression |
+                       arithmeticExpression EQ arithmeticExpression;
 
 arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression DIVIDE arithmeticExpression |
