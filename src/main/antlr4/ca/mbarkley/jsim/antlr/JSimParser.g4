@@ -11,18 +11,19 @@ statement : expression | definition;
 
 definition : DEFINE IDENTIFIER EQ expression;
 
-expression : arithmeticExpression |
+expression : IDENTIFIER |
+             arithmeticExpression |
              booleanExpression;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
                     booleanExpression OR booleanExpression |
-                    booleanTerm;
+                    comparison;
 
-booleanTerm : arithmeticExpression LT arithmeticExpression |
-              arithmeticExpression GT arithmeticExpression |
-              arithmeticExpression EQ arithmeticExpression |
-              booleanLiteral;
+comparison : arithmeticExpression LT arithmeticExpression |
+             arithmeticExpression GT arithmeticExpression |
+             arithmeticExpression EQ arithmeticExpression |
+             booleanTerm;
 
 arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression DIVIDE arithmeticExpression |
@@ -32,4 +33,4 @@ arithmeticExpression : LB arithmeticExpression RB |
 
 arithmeticTerm : NUMBER | ROLL | IDENTIFIER;
 
-booleanLiteral : TRUE | FALSE;
+booleanTerm : TRUE | FALSE | IDENTIFIER;

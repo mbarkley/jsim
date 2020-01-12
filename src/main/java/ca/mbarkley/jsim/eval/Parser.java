@@ -3,7 +3,6 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
-import ca.mbarkley.jsim.model.BooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.*;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
@@ -115,8 +114,11 @@ public class Parser {
                 return booleanExpressionVisitor.visitBooleanExpression(evalCtx, ctx.booleanExpression());
             } else if (ctx.arithmeticExpression() != null) {
                 return arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression());
+            } else if (ctx.IDENTIFIER() != null) {
+                final String identifier = ctx.IDENTIFIER().getText();
+                return lookupIdentifier(evalCtx, identifier);
             } else {
-                throw new IllegalArgumentException(format("Statement is neither a question or expression [%s]", ctx));
+                throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx));
             }
         }
     }
@@ -140,13 +142,13 @@ public class Parser {
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
             } else {
-                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
+                return visitComparison(evalCtx, ctx.comparison());
             }
         }
 
-        public BooleanExpression visitBooleanTerm(Context evalCtx, JSimParser.BooleanTermContext ctx) {
-            if (ctx.booleanLiteral() != null) {
-                return visitBooleanLiteral(ctx.booleanLiteral());
+        public Expression<Boolean> visitComparison(Context evalCtx, JSimParser.ComparisonContext ctx) {
+            if (ctx.booleanTerm() != null) {
+                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
             } else {
                 final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
                 final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
@@ -158,11 +160,16 @@ public class Parser {
             }
         }
 
-        public BooleanExpression visitBooleanLiteral(JSimParser.BooleanLiteralContext ctx) {
+        public Expression<Boolean> visitBooleanTerm(Context evalCtx, JSimParser.BooleanTermContext ctx) {
             if (ctx.TRUE() != null) {
                 return BooleanConstant.TRUE;
-            } else {
+            } else if (ctx.FALSE() != null) {
                 return BooleanConstant.FALSE;
+            } else if (ctx.IDENTIFIER() != null) {
+                final String identifier = ctx.IDENTIFIER().getText();
+                return lookupIdentifier(evalCtx, Boolean.class, identifier);
+            } else {
+                throw new IllegalStateException();
             }
         }
     }
@@ -209,13 +216,8 @@ public class Parser {
                 throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
             } else if (ctx.IDENTIFIER() != null) {
                 final String identifier = ctx.IDENTIFIER().getText();
-                final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
-                final Class<?> type = expression.getType();
-                if (Integer.class.equals(type)) {
-                    return (Expression<Integer>) expression;
-                } else {
-                    throw new IllegalStateException(format("Expected [%s] to be integer value but was [%s]", identifier, type.getSimpleName()));
-                }
+                final Class<Integer> expectedType = Integer.class;
+                return lookupIdentifier(evalCtx, expectedType, identifier);
             } else {
                 throw new IllegalStateException(ctx.toString());
             }
@@ -233,6 +235,29 @@ public class Parser {
             final String operatorText = ctx.getChild(1).getText();
             return Operator.lookup(operatorText)
                            .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));
+        }
+    }
+
+    static <T extends Comparable<T>> Expression<T> lookupIdentifier(Context evalCtx, Class<T> expectedType, String identifier) {
+        final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
+        if (expression != null) {
+            final Class<?> type = expression.getType();
+            if (expectedType.equals(type)) {
+                return (Expression<T>) expression;
+            } else {
+                throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getSimpleName(), type.getSimpleName()));
+            }
+        } else {
+            throw new IllegalStateException(format("Undefined identifier [%s]", identifier));
+        }
+    }
+
+    static Expression<?> lookupIdentifier(Context evalCtx, String identifier) {
+        final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
+        if (expression != null) {
+            return expression;
+        } else {
+            throw new IllegalStateException(format("Undefined identifier [%s]", identifier));
         }
     }
 }
