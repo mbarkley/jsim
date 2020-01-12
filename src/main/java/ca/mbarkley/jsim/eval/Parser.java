@@ -16,10 +16,7 @@ import ca.mbarkley.jsim.model.Expression.EventList;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
 import java.util.*;
@@ -37,7 +34,7 @@ public class Parser {
     }
 
     public Evaluation parse(Context evalCtx, String expression) {
-        @SuppressWarnings("deprecation") final ANTLRInputStream is = new ANTLRInputStream(expression);
+        final CodePointCharStream is = CharStreams.fromString(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
