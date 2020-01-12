@@ -3,6 +3,7 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
+import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
@@ -21,6 +22,7 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -120,36 +122,90 @@ public class Parser {
             }
         }
 
+        @SuppressWarnings({"rawtypes", "unchecked"})
         private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
-            final Map<Type<?>, List<?>> valuesByType = ctx.diceSideDeclaration()
-                                                           .stream()
-                                                           .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
-                                                           .collect(groupingBy(Constant::getType, collectingAndThen(toList(), c -> c.stream()
-                                                                                                                                    .map(Constant::getValue)
-                                                                                                                                    .collect(toList()))));
+            final List<Constant<?>> values = ctx.diceSideDeclaration()
+                                                .stream()
+                                                .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
+                                                .collect(toList());
+            final Set<Type<?>> types = values.stream()
+                                                       .map(Constant::getType)
+                                                       .collect(toSet());
 
-            if (valuesByType.isEmpty()) {
+            if (values.isEmpty()) {
                 throw new IllegalStateException("Cannot have empty dice declaration");
-            } else if (valuesByType.keySet().size() > 1) {
-                throw new EvaluationException.DiceTypeException(valuesByType.keySet()
-                                                                            .stream()
-                                                                            .map(Type::getName)
-                                                                            .collect(toSet()));
             } else {
-                final Type<?> type = valuesByType.keySet().iterator().next();
-                final double prob = 1.0 / (double) ctx.diceSideDeclaration().size();
-                final List<Event<?>> events = valuesByType.values()
-                                                          .stream()
-                                                          .flatMap(Collection::stream)
-                                                          .map(v -> new Event<>(v, prob))
-                                                          .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
-                                                          .entrySet()
-                                                          .stream()
-                                                          .map(e -> new Event<>(e.getKey(), e.getValue()))
-                                                          .collect(toList());
+                final Type<?> type = findCommonType(types);
+                if (type instanceof VectorType) {
+                    final SortedMap<String, Type<?>> dimensions = ((VectorType) type).getDimensions();
+                    final List newValues = values.stream()
+                                                 .map(c -> {
+                                                     final Vector v = (Vector) c.getValue();
+                                                     final Map<String, Dimension<?>> dimsByName = v.getCoordinate()
+                                                                                                   .stream()
+                                                                                                   .collect(toMap(Dimension::getName, Function.identity()));
+                                                     List<Dimension<?>> newCoords = new ArrayList<>(v.getCoordinate());
+                                                     for (var entry : dimensions.entrySet()) {
+                                                         final String name = entry.getKey();
+                                                         final Type<?> dimType = entry.getValue();
+                                                         if (!dimsByName.containsKey(name)) {
+                                                             final Comparable<?> zero = dimType.zero();
+                                                             newCoords.add(new Dimension(name, new Constant(dimType, zero)));
+                                                         }
+                                                     }
 
-                //noinspection unchecked,rawtypes
-                return new EventList(type, events);
+                                                     return new Constant(type, new Vector((VectorType) type, newCoords));
+                                                 })
+                                                 .collect(toList());
+
+                    return generateEventList(ctx, type, newValues);
+                } else {
+                    return generateEventList(ctx, type, values);
+                }
+            }
+        }
+
+        private Expression<?> generateEventList(JSimParser.DiceDeclarationContext ctx, Type<?> type, List<Constant<?>> values) {
+            final double prob = 1.0 / (double) ctx.diceSideDeclaration().size();
+            final List<Event<?>> events = values.stream()
+                                                .map(Constant::getValue)
+                                                .map(v -> new Event<>(v, prob))
+                                                .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
+                                                .entrySet()
+                                                .stream()
+                                                .map(e -> new Event<>(e.getKey(), e.getValue()))
+                                                .collect(toList());
+
+            //noinspection unchecked,rawtypes
+            return new EventList(type, events);
+        }
+
+        private Type<?> findCommonType(Set<Type<?>> types) throws EvaluationException {
+            if (types.size() > 1) {
+                if (types.stream().allMatch(t -> t instanceof Type.VectorType)) {
+                    final SortedMap<String, Type<?>> dimensionSuperset = new TreeMap<>();
+                    for (var t : types) {
+                        final SortedMap<String, Type<?>> dimensions = ((VectorType) t).getDimensions();
+                        for (var dim : dimensions.entrySet()) {
+                            dimensionSuperset.compute(dim.getKey(), (k, v) -> {
+                                if (v == null || v.equals(dim.getValue())) {
+                                    return dim.getValue();
+                                } else {
+                                    throw new EvaluationException(
+                                            format("Dimension [%s] must have one type, but found [%s] and [%s]", dim.getKey(), v, dim.getValue()));
+                                }
+                            });
+                        }
+                    }
+
+                    return new VectorType(dimensionSuperset);
+                } else {
+                    throw new DiceTypeException(types.stream()
+                                                     .map(Type::getName)
+                                                     .collect(toSet()));
+                }
+            } else {
+                return types.iterator().next();
             }
         }
 
@@ -162,6 +218,8 @@ public class Parser {
                 return BooleanExpression.FALSE;
             } else if (ctx.SYMBOL() != null) {
                 return new Constant<>(Types.SYMBOL_TYPE, ctx.SYMBOL().getText());
+            } else if (ctx.vectorLiteral() != null) {
+                return expressionVisitor.visitVectorLiteral(evalCtx, ctx.vectorLiteral());
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
@@ -212,7 +270,7 @@ public class Parser {
             }
         }
 
-        private Expression<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
+        private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
             SortedMap<String, Type<?>> typesByDimName = new TreeMap<>();
             List<Dimension<?>> dimensions = new ArrayList<>(ctx.dimension().size());
             for (var dim : ctx.dimension()) {

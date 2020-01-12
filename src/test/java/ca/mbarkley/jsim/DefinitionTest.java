@@ -193,6 +193,62 @@ public class DefinitionTest {
         assertThat(result).hasEntrySatisfying(vector, prob -> assertThat(prob).isCloseTo(1.0, offset));
     }
 
+    @Test
+    public void defineAndUseVectorDie() {
+        final Evaluation eval = parser.parse("define attack = [{'dmg:1, 'range:2}, {'dmg:2,'range:1}]; attack");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
+        final List<Dimension<?>> coordinate1 = List.of(
+                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
+                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 2))
+        );
+        final List<Dimension<?>> coordinate2 = List.of(
+                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 2)),
+                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 1))
+        );
+        final Vector vector1 = new Vector(type, coordinate1);
+        final Vector vector2 = new Vector(type, coordinate2);
+        assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .containsOnlyKeys(vector1, vector2);
+    }
+
+    @Test
+    public void defineAndUseVectorDieWithImpliedSupertype() {
+        final Evaluation eval = parser.parse("define attack = [{'dmg:1}, {'dmg:1,'range:1}]; attack");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
+        final List<Dimension<?>> coordinate1 = List.of(
+                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
+                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 0))
+        );
+        final List<Dimension<?>> coordinate2 = List.of(
+                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
+                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 1))
+        );
+        final Vector vector1 = new Vector(type, coordinate1);
+        final Vector vector2 = new Vector(type, coordinate2);
+        assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .containsOnlyKeys(vector1, vector2);
+    }
+
     @Test(expected = DiceTypeException.class)
     public void mismatchedDiceType() {
         parser.parse("define myTest = [1, 3, true]; myTest + 1");

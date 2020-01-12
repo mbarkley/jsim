@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
-public abstract class Type<T> implements Comparator<T> {
+public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     public abstract T zero();
     public abstract String getName();
 

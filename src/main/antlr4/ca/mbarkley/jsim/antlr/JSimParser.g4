@@ -16,7 +16,7 @@ definitionBody : expression |
 
 diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 
-diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL;
+diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL | vectorLiteral;
 
 expression : IDENTIFIER |
              SYMBOL |
