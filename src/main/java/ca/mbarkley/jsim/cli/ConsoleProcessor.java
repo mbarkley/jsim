@@ -1,7 +1,6 @@
 package ca.mbarkley.jsim.cli;
 
-import ca.mbarkley.jsim.Displayer;
-import ca.mbarkley.jsim.Parser;
+import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 
@@ -26,7 +25,7 @@ public class ConsoleProcessor {
                 break;
             } else {
                 try {
-                    final List<Expression<?>> stmts = parser.parse(line);
+                    final List<Expression<?>> stmts = parser.parse(line).getExpressions();
                     for (var stmt : stmts) {
                         final String sortedHistogram = displayer.createSortedHistogram(stmt.toString(), stmt.events());
                         console.printf("%s", sortedHistogram);

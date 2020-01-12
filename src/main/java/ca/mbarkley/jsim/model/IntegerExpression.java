@@ -17,6 +17,11 @@ import static java.util.stream.Collectors.*;
 public abstract class IntegerExpression extends Expression<Integer> {
     private IntegerExpression() {}
 
+    @Override
+    public TypeLiteral<Integer> getType() {
+        return new TypeLiteral<>() {};
+    }
+
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class Constant extends IntegerExpression {

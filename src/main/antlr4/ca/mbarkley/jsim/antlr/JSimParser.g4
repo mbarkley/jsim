@@ -7,8 +7,12 @@ options {
 // Grammar rules
 jsim : statement? (TERMINATOR+ statement)* TERMINATOR* EOF;
 
-statement : arithmeticExpression |
-            booleanExpression;
+statement : expression | definition;
+
+definition : DEFINE IDENTIFIER EQ expression;
+
+expression : arithmeticExpression |
+             booleanExpression;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |

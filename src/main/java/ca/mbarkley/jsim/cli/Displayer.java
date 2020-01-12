@@ -1,4 +1,4 @@
-package ca.mbarkley.jsim;
+package ca.mbarkley.jsim.cli;
 
 import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;

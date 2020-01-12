@@ -15,6 +15,8 @@ AND=14
 OR=15
 TERMINATOR=16
 ROLL=17
+DEFINE=18
+IDENTIFIER=19
 'true'=3
 'false'=4
 '*'=5
@@ -28,3 +30,4 @@ ROLL=17
 '='=13
 'and'=14
 'or'=15
+'define'=18

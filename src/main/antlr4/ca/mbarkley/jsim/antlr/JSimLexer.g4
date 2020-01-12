@@ -44,3 +44,7 @@ fragment H : ('h' | 'H');
 fragment L : ('l' | 'L');
 
 ROLL : NUMBER? D NUMBER ((H|L) NUMBER)?;
+
+DEFINE : 'define';
+
+IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]+;

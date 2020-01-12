@@ -1,4 +1,4 @@
-package ca.mbarkley.jsim;
+package ca.mbarkley.jsim.eval;
 
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
@@ -15,17 +15,19 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 
 public class Parser {
     private static final Pattern ROLL = Pattern.compile("(\\d+)?[dD](\\d+)(?:([HhLl])(\\d+))?");
 
-    public List<Expression<?>> parse(String expression) throws RecognitionException {
+    public Evaluation parse(String expression) {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
@@ -41,7 +43,7 @@ public class Parser {
 
         final ArithmeticExpressionVisitor arithmeticExpressionVisitor = new ArithmeticExpressionVisitor();
         final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor(arithmeticExpressionVisitor);
-        final StatementVisitor visitor = new StatementVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor);
+        final StatementVisitor visitor = new StatementVisitor(new ExpressionVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor));
 
         return visitor.visit(ctx);
     }
@@ -61,30 +63,58 @@ public class Parser {
     }
 
     @RequiredArgsConstructor
-    private static class StatementVisitor extends JSimParserBaseVisitor<List<Expression<?>>> {
-        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
-        private final BooleanExpressionVisitor booleanExpressionVisitor;
+    private static class StatementVisitor extends JSimParserBaseVisitor<Evaluation> {
+        private final ExpressionVisitor expressionVisitor;
 
         @Override
-        public List<Expression<?>> visitJsim(JSimParser.JsimContext ctx) {
+        public Evaluation visitJsim(JSimParser.JsimContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else {
-                return ctx.statement()
-                          .stream()
-                          .flatMap(stmt -> visitStatement(stmt).stream())
-                          .collect(toList());
+                final Map<String, Expression<?>> definitions = new HashMap<>();
+                final List<Expression<?>> expressions = new ArrayList<>();
+                for (var stmt : ctx.statement()) {
+                    final Evaluation evaluation = visitStatement(new Context(definitions), stmt);
+                    definitions.putAll(evaluation.getContext().getDefinitions());
+                    expressions.addAll(evaluation.getExpressions());
+                }
+
+                return new Evaluation(new Context(definitions), expressions);
             }
         }
 
-        @Override
-        public List<Expression<?>> visitStatement(JSimParser.StatementContext ctx) {
+        public Evaluation visitStatement(Context evalCtx, JSimParser.StatementContext ctx) {
+            if (ctx.expression() != null) {
+                return new Evaluation(evalCtx, List.of(expressionVisitor.visitExpression(evalCtx, ctx.expression())));
+            } else {
+                return visitDefinition(evalCtx, ctx.definition());
+            }
+        }
+
+        public Evaluation visitDefinition(Context evalCtx, JSimParser.DefinitionContext ctx) {
+            final String identifier = ctx.IDENTIFIER().getText();
+            final Expression<?> expression = expressionVisitor.visitExpression(evalCtx, ctx.expression());
+
+            Map<String, Expression<?>> modifiedDefintions = new HashMap<>(evalCtx.getDefinitions());
+            modifiedDefintions.put(identifier, expression);
+            final Context newEvalCtx = new Context(modifiedDefintions);
+
+            return new Evaluation(newEvalCtx, List.of());
+        }
+    }
+
+    @RequiredArgsConstructor
+    private static class ExpressionVisitor {
+        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
+        private final BooleanExpressionVisitor booleanExpressionVisitor;
+
+        public Expression<?> visitExpression(Context evalCtx, JSimParser.ExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.booleanExpression() != null) {
-                return List.of(booleanExpressionVisitor.visitBooleanExpression(ctx.booleanExpression()));
+                return booleanExpressionVisitor.visitBooleanExpression(ctx.booleanExpression());
             } else if (ctx.arithmeticExpression() != null) {
-                return List.of(arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression()));
+                return arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression());
             } else {
                 throw new IllegalArgumentException(format("Statement is neither a question or expression [%s]", ctx));
             }

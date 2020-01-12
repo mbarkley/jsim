@@ -13,6 +13,11 @@ import static java.lang.String.format;
 
 public abstract class BooleanExpression extends Expression<Boolean> {
 
+    @Override
+    public TypeLiteral<Boolean> getType() {
+        return new TypeLiteral<>() {};
+    }
+
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpBooleanExpression extends BooleanExpression {

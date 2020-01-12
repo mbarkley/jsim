@@ -1,5 +1,7 @@
 package ca.mbarkley.jsim;
 
+import ca.mbarkley.jsim.cli.Displayer;
+import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import org.junit.Test;
 
@@ -14,7 +16,7 @@ public class DisplayerTest {
 
     @Test
     public void simpleHistogram() {
-        final List<Expression<?>> stmts = parser.parse("2d6");
+        final List<Expression<?>> stmts = parser.parse("2d6").getExpressions();
         final String sortedHistogram = displayer.createSortedHistogram("2d6", stmts.get(0).calculateResults().values().stream());
         assertThat(sortedHistogram).isEqualTo(
                         "--------------------------------------------------------- 2d6  ---------------------------------------------------------\n" +

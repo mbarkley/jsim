@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim;
 
+import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.prob.Event;
 import org.assertj.core.data.Offset;
@@ -18,7 +19,7 @@ public class CalculatorTest {
 
     @Test
     public void rollLessThanConstant() {
-        final List<Expression<?>> stmts = parser.parse("d6 < 4");
+        final List<Expression<?>> stmts = parser.parse("d6 < 4").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -27,7 +28,7 @@ public class CalculatorTest {
 
     @Test
     public void complexRollGreaterThanConstant() {
-        final List<Expression<?>> stmts = parser.parse("2d6 + 1 > 6");
+        final List<Expression<?>> stmts = parser.parse("2d6 + 1 > 6").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -36,7 +37,7 @@ public class CalculatorTest {
 
     @Test
     public void multipliedRollsGreaterThanConstant() {
-        final List<Expression<?>> stmts = parser.parse("d4 * d4 > 8");
+        final List<Expression<?>> stmts = parser.parse("d4 * d4 > 8").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -45,7 +46,7 @@ public class CalculatorTest {
 
     @Test
     public void complexRollLessThanComplexRoll() {
-        final List<Expression<?>> stmts = parser.parse("2d6 + 1 < 2d8 - 4");
+        final List<Expression<?>> stmts = parser.parse("2d6 + 1 < 2d8 - 4").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -54,7 +55,7 @@ public class CalculatorTest {
 
     @Test
     public void constantLessThanConstant() {
-        final List<Expression<?>> stmts = parser.parse("1 < 2");
+        final List<Expression<?>> stmts = parser.parse("1 < 2").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -63,7 +64,7 @@ public class CalculatorTest {
 
     @Test
     public void bigAdditionQuestion() {
-        final List<Expression<?>> stmts = parser.parse("6d20 + 14d20 > 200");
+        final List<Expression<?>> stmts = parser.parse("6d20 + 14d20 > 200").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -72,7 +73,7 @@ public class CalculatorTest {
 
     @Test
     public void bigMultiRollQuestion() {
-        final List<Expression<?>> stmts = parser.parse("20d20 > 200");
+        final List<Expression<?>> stmts = parser.parse("20d20 > 200").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -81,7 +82,7 @@ public class CalculatorTest {
 
     @Test
     public void reallyBigMultiRollQuestion() {
-        final List<Expression<?>> stmts = parser.parse("100d20 > 1000");
+        final List<Expression<?>> stmts = parser.parse("100d20 > 1000").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -90,7 +91,7 @@ public class CalculatorTest {
 
     @Test
     public void simpleExpressionResults() {
-        final List<Expression<?>> stmts = parser.parse("2d4");
+        final List<Expression<?>> stmts = parser.parse("2d4").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -111,7 +112,7 @@ public class CalculatorTest {
 
     @Test
     public void highDiceExpressionResults() {
-        final List<Expression<?>> stmts = parser.parse("7d4H1");
+        final List<Expression<?>> stmts = parser.parse("7d4H1").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -129,7 +130,7 @@ public class CalculatorTest {
 
     @Test
     public void lowDiceExpressionResults() {
-        final List<Expression<?>> stmts = parser.parse("7d4L1");
+        final List<Expression<?>> stmts = parser.parse("7d4L1").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -147,7 +148,7 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithSubtraction() {
-        final List<Expression<?>> stmts = parser.parse("2 - 1 + 1");
+        final List<Expression<?>> stmts = parser.parse("2 - 1 + 1").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -162,7 +163,7 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithMultiplication() {
-        final List<Expression<?>> stmts = parser.parse("2 + 1 * 3");
+        final List<Expression<?>> stmts = parser.parse("2 + 1 * 3").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -177,7 +178,7 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithDivision() {
-        final List<Expression<?>> stmts = parser.parse("2 + 1 / 3");
+        final List<Expression<?>> stmts = parser.parse("2 + 1 / 3").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -192,7 +193,7 @@ public class CalculatorTest {
 
     @Test
     public void orderOfOperationsWithDivisionAndMultiplication() {
-        final List<Expression<?>> stmts = parser.parse("3 * 1 / 3");
+        final List<Expression<?>> stmts = parser.parse("3 * 1 / 3").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -207,7 +208,7 @@ public class CalculatorTest {
 
     @Test
     public void fullBedmas() {
-        final List<Expression<?>> stmts = parser.parse("3 * (3 + 1) / 4 * 10");
+        final List<Expression<?>> stmts = parser.parse("3 * (3 + 1) / 4 * 10").getExpressions();
 
         final Map<Integer, Double> result = stmts.get(0)
                                                  .calculateResults()
@@ -222,7 +223,7 @@ public class CalculatorTest {
 
     @Test
     public void disjunctive() {
-        final List<Expression<?>> stmts = parser.parse("d6 = 1 or d6 = 2");
+        final List<Expression<?>> stmts = parser.parse("d6 = 1 or d6 = 2").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -231,7 +232,7 @@ public class CalculatorTest {
 
     @Test
     public void conjunctive() {
-        final List<Expression<?>> stmts = parser.parse("d6 = 1 and d6 = 2");
+        final List<Expression<?>> stmts = parser.parse("d6 = 1 and d6 = 2").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -240,7 +241,7 @@ public class CalculatorTest {
 
     @Test
     public void booleanOrderOfOperations() {
-        final List<Expression<?>> stmts = parser.parse("d6 = 1 and d6 = 2 or d100 = 1");
+        final List<Expression<?>> stmts = parser.parse("d6 = 1 and d6 = 2 or d100 = 1").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -249,7 +250,7 @@ public class CalculatorTest {
 
     @Test
     public void booleanOrderOfOperationsWithBracketing() {
-        final List<Expression<?>> stmts = parser.parse("d6 = 1 and (d6 = 2 or d100 = 1)");
+        final List<Expression<?>> stmts = parser.parse("d6 = 1 and (d6 = 2 or d100 = 1)").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
@@ -258,7 +259,7 @@ public class CalculatorTest {
 
     @Test
     public void booleanConstantExpression() {
-        final  List<Expression<?>> stmts = parser.parse("true");
+        final  List<Expression<?>> stmts = parser.parse("true").getExpressions();
 
         final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
 
