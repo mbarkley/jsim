@@ -30,6 +30,6 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
                        arithmeticTerm;
 
-arithmeticTerm : NUMBER | ROLL;
+arithmeticTerm : NUMBER | ROLL | IDENTIFIER;
 
 booleanLiteral : TRUE | FALSE;

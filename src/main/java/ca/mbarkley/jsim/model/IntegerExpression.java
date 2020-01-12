@@ -18,8 +18,8 @@ public abstract class IntegerExpression extends Expression<Integer> {
     private IntegerExpression() {}
 
     @Override
-    public TypeLiteral<Integer> getType() {
-        return new TypeLiteral<>() {};
+    public Class<Integer> getType() {
+        return Integer.class;
     }
 
     @Value

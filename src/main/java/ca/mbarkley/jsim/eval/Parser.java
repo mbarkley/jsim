@@ -112,9 +112,9 @@ public class Parser {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.booleanExpression() != null) {
-                return booleanExpressionVisitor.visitBooleanExpression(ctx.booleanExpression());
+                return booleanExpressionVisitor.visitBooleanExpression(evalCtx, ctx.booleanExpression());
             } else if (ctx.arithmeticExpression() != null) {
-                return arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression());
+                return arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression());
             } else {
                 throw new IllegalArgumentException(format("Statement is neither a question or expression [%s]", ctx));
             }
@@ -122,11 +122,10 @@ public class Parser {
     }
 
     @RequiredArgsConstructor
-    private static class BooleanExpressionVisitor extends JSimParserBaseVisitor<Expression<Boolean>> {
+    private static class BooleanExpressionVisitor {
         private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
 
-        @Override
-        public Expression<Boolean> visitBooleanExpression(JSimParser.BooleanExpressionContext ctx) {
+        public Expression<Boolean> visitBooleanExpression(Context evalCtx, JSimParser.BooleanExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.booleanExpression().size() == 2) {
@@ -134,24 +133,23 @@ public class Parser {
                 final BooleanOperator operator = BooleanOperator.lookup(booleanOperatorText)
                                                                 .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
 
-                final Expression<Boolean> left = visitBooleanExpression(ctx.booleanExpression(0));
-                final Expression<Boolean> right = visitBooleanExpression(ctx.booleanExpression(1));
+                final Expression<Boolean> left = visitBooleanExpression(evalCtx, ctx.booleanExpression(0));
+                final Expression<Boolean> right = visitBooleanExpression(evalCtx, ctx.booleanExpression(1));
 
                 return new BinaryOpBooleanExpression(left, operator, right);
             } else if (ctx.booleanExpression().size() == 1) {
-                return new Bracketed<>(visitBooleanExpression(ctx.booleanExpression(0)));
+                return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
             } else {
-                return visitBooleanTerm(ctx.booleanTerm());
+                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
             }
         }
 
-        @Override
-        public BooleanExpression visitBooleanTerm(JSimParser.BooleanTermContext ctx) {
+        public BooleanExpression visitBooleanTerm(Context evalCtx, JSimParser.BooleanTermContext ctx) {
             if (ctx.booleanLiteral() != null) {
                 return visitBooleanLiteral(ctx.booleanLiteral());
             } else {
-                final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(0));
-                final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(ctx.arithmeticExpression(1));
+                final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
+                final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
                 final String comparatorText = ctx.getChild(1).getText();
                 final Comparator comparator = Comparator.lookup(comparatorText)
                                                         .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
@@ -160,7 +158,6 @@ public class Parser {
             }
         }
 
-        @Override
         public BooleanExpression visitBooleanLiteral(JSimParser.BooleanLiteralContext ctx) {
             if (ctx.TRUE() != null) {
                 return BooleanConstant.TRUE;
@@ -170,24 +167,22 @@ public class Parser {
         }
     }
 
-    private static class ArithmeticExpressionVisitor extends JSimParserBaseVisitor<Expression<Integer>> {
-        @Override
-        public Expression<Integer> visitArithmeticExpression(JSimParser.ArithmeticExpressionContext ctx) {
+    private static class ArithmeticExpressionVisitor {
+        public Expression<Integer> visitArithmeticExpression(Context evalCtx, JSimParser.ArithmeticExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.arithmeticExpression().size() == 2) {
-                return visitBinaryExpression(ctx);
+                return visitBinaryExpression(evalCtx, ctx);
             } else if (ctx.arithmeticExpression().size() == 1) {
-                return new Bracketed<>(visitArithmeticExpression(ctx.arithmeticExpression(0)));
+                return new Bracketed<>(visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0)));
             } else if (ctx.arithmeticTerm() != null) {
-                return visitArithmeticTerm(ctx.arithmeticTerm());
+                return visitArithmeticTerm(evalCtx, ctx.arithmeticTerm());
             } else {
                 throw new IllegalStateException();
             }
         }
 
-        @Override
-        public Expression<Integer> visitArithmeticTerm(JSimParser.ArithmeticTermContext ctx) {
+        public Expression<Integer> visitArithmeticTerm(Context evalCtx, JSimParser.ArithmeticTermContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.NUMBER() != null) {
@@ -212,14 +207,23 @@ public class Parser {
                 }
 
                 throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
+            } else if (ctx.IDENTIFIER() != null) {
+                final String identifier = ctx.IDENTIFIER().getText();
+                final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
+                final Class<?> type = expression.getType();
+                if (Integer.class.equals(type)) {
+                    return (Expression<Integer>) expression;
+                } else {
+                    throw new IllegalStateException(format("Expected [%s] to be integer value but was [%s]", identifier, type.getSimpleName()));
+                }
             } else {
                 throw new IllegalStateException(ctx.toString());
             }
         }
 
-        private Expression<Integer> visitBinaryExpression(JSimParser.ArithmeticExpressionContext ctx) {
-            final Expression<Integer> left = visitArithmeticExpression(ctx.arithmeticExpression(0));
-            final Expression<Integer> right = visitArithmeticExpression(ctx.arithmeticExpression(1));
+        private Expression<Integer> visitBinaryExpression(Context evalCtx, JSimParser.ArithmeticExpressionContext ctx) {
+            final Expression<Integer> left = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
+            final Expression<Integer> right = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
             final Operator sign = getOperator(ctx);
 
             return new BinaryOpExpression(left, sign, right);
@@ -229,17 +233,6 @@ public class Parser {
             final String operatorText = ctx.getChild(1).getText();
             return Operator.lookup(operatorText)
                            .orElseThrow(() -> new RuntimeException(format("Unrecognized operator [%s]", operatorText)));
-        }
-
-        @Override
-        protected Expression<Integer> aggregateResult(Expression<Integer> aggregate, Expression<Integer> nextResult) {
-            if (aggregate == null) {
-                return nextResult;
-            } else if (nextResult == null) {
-                return aggregate;
-            } else {
-                throw new IllegalStateException(format("Cannot merge two non-null expressions [%s] and [%s] outside context of a binary expression", aggregate, nextResult));
-            }
         }
     }
 }

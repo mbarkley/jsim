@@ -12,9 +12,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 public abstract class Expression<T extends Comparable<T>> {
-    public static abstract class TypeLiteral<T> {
-    }
-
     protected Expression() {}
 
     public abstract Stream<Event<T>> events();
@@ -23,7 +20,7 @@ public abstract class Expression<T extends Comparable<T>> {
         return events().collect(toMap(Event::getValue, identity()));
     }
 
-    public abstract TypeLiteral<T> getType();
+    public abstract Class<T> getType();
 
     @Value
     @EqualsAndHashCode(callSuper = false)
@@ -41,7 +38,7 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public TypeLiteral<T> getType() {
+        public Class<T> getType() {
             return subExpression.getType();
         }
     }
