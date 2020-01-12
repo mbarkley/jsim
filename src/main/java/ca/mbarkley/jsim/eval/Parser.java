@@ -159,6 +159,8 @@ public class Parser {
                 return BooleanExpression.TRUE;
             } else if (ctx.FALSE() != null) {
                 return BooleanExpression.FALSE;
+            } else if (ctx.SYMBOL() != null) {
+                return new Constant<>(ctx.SYMBOL().getText());
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
@@ -180,8 +182,10 @@ public class Parser {
             } else if (ctx.IDENTIFIER() != null) {
                 final String identifier = ctx.IDENTIFIER().getText();
                 return lookupIdentifier(evalCtx, identifier);
+            } else if (ctx.SYMBOL() != null) {
+                return new Constant<>(ctx.SYMBOL().getText());
             } else {
-                throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx));
+                throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx.getText()));
             }
         }
     }
@@ -212,7 +216,7 @@ public class Parser {
         public Expression<Boolean> visitComparison(Context evalCtx, JSimParser.ComparisonContext ctx) {
             if (ctx.booleanTerm() != null) {
                 return visitBooleanTerm(evalCtx, ctx.booleanTerm());
-            } else {
+            } else if (ctx.arithmeticExpression().size() == 2) {
                 final Expression<Integer> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
                 final Expression<Integer> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
                 final String comparatorText = ctx.getChild(1).getText();
@@ -220,6 +224,23 @@ public class Parser {
                                                                                       .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
 
                 return new ComparisonExpression<>(left, comparator, right);
+            } else if (ctx.symbolTerm().size() == 2) {
+                final Expression<String> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
+                final Expression<String> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
+
+                return new ComparisonExpression<>(left, BinaryOperator.equality(String.class), right);
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
+        }
+
+        private Expression<String> visitSymbolTerm(Context evalCtx, JSimParser.SymbolTermContext ctx) {
+            if (ctx.SYMBOL() != null) {
+                return new Constant<>(ctx.getText());
+            } else if (ctx.IDENTIFIER() != null) {
+                return lookupIdentifier(evalCtx, String.class, ctx.IDENTIFIER().getText());
+            } else {
+                throw new IllegalStateException(ctx.getText());
             }
         }
 

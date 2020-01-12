@@ -274,4 +274,13 @@ public class CalculatorTest {
 
         Assert.assertEquals(1.0, result.get(true).getProbability(), 0.0001);
     }
+
+    @Test
+    public void symbolicEqualityExpression() {
+        final  List<Expression<?>> stmts = parser.parse("'foo = 'foo").getExpressions();
+
+        final Map<?, ? extends Event<?>> result = stmts.get(0).calculateResults();
+
+        Assert.assertEquals(1.0, result.get(true).getProbability(), 0.0001);
+    }
 }

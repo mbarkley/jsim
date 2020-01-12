@@ -5,6 +5,7 @@ import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
+import org.antlr.v4.runtime.RecognitionException;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
 
@@ -131,6 +132,38 @@ public class DefinitionTest {
         assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(2.0/3.0, offset))
                           .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/3.0, offset))
                           .containsOnlyKeys(true, false);
+    }
+
+    @Test
+    public void evaluateCustomSymbolDiceDefinition() {
+        final Evaluation eval = parser.parse("define coin = ['heads, 'tails]; coin = 'heads");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .containsOnlyKeys(true, false);
+    }
+
+    @Test
+    public void evaluateConstantSymbolDefinition() {
+        final Evaluation eval = parser.parse("define heads = 'heads; heads = 'heads");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0, offset));
     }
 
     @Test(expected = DiceTypeException.class)

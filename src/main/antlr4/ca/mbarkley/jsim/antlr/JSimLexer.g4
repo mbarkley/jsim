@@ -26,6 +26,12 @@ LSB : '[';
 
 RSB : ']';
 
+LCB : '{';
+
+RCB : '}';
+
+COLON : ':';
+
 COMMA : ',';
 
 // Relation symbols

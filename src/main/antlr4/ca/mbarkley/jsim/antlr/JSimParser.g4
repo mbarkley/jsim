@@ -16,7 +16,7 @@ definitionBody : expression |
 
 diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 
-diceSideDeclaration : NUMBER | TRUE | FALSE;
+diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL;
 
 expression : IDENTIFIER |
              SYMBOL |
@@ -32,6 +32,7 @@ booleanExpression : LB booleanExpression RB |
 comparison : arithmeticExpression LT arithmeticExpression |
              arithmeticExpression GT arithmeticExpression |
              arithmeticExpression EQ arithmeticExpression |
+             symbolTerm EQ symbolTerm |
              booleanTerm;
 
 arithmeticExpression : LB arithmeticExpression RB |
@@ -43,3 +44,5 @@ arithmeticExpression : LB arithmeticExpression RB |
 arithmeticTerm : NUMBER | ROLL | IDENTIFIER;
 
 booleanTerm : TRUE | FALSE | IDENTIFIER;
+
+symbolTerm : SYMBOL | IDENTIFIER;
