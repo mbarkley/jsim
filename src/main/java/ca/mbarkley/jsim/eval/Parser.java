@@ -248,7 +248,7 @@ public class Parser {
                 throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getSimpleName(), type.getSimpleName()));
             }
         } else {
-            throw new IllegalStateException(format("Undefined identifier [%s]", identifier));
+            throw new UndefinedIdentifierException(identifier);
         }
     }
 
@@ -257,7 +257,7 @@ public class Parser {
         if (expression != null) {
             return expression;
         } else {
-            throw new IllegalStateException(format("Undefined identifier [%s]", identifier));
+            throw new UndefinedIdentifierException(identifier);
         }
     }
 }

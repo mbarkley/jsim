@@ -2,6 +2,7 @@ package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.eval.Evaluation;
 import ca.mbarkley.jsim.eval.Parser;
+import ca.mbarkley.jsim.eval.UndefinedIdentifierException;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.prob.Event;
 import org.antlr.v4.runtime.RecognitionException;
@@ -56,24 +57,19 @@ public class DefinitionTest {
 
     @Test
     public void evaluateBooleanDefinition() {
-        try {
-            final Evaluation eval = parser.parse("define myTest = d6 > 3; myTest and true");
+        final Evaluation eval = parser.parse("define myTest = d6 > 3; myTest and true");
 
-            assertThat(eval.getExpressions()).hasSize(1);
-            final Map<Boolean, Double> result = eval.getExpressions()
-                                                    .get(0)
-                                                    .calculateResults()
-                                                    .entrySet()
-                                                    .stream()
-                                                    .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
-            final Offset<Double> offset = offset(0.0001);
-            assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(0.5, offset))
-                              .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(0.5, offset))
-                              .containsOnlyKeys(true, false);
-        } catch (RecognitionException re) {
-            final Token token = re.getOffendingToken();
-            fail("index=%s", token.getCharPositionInLine());
-        }
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .containsOnlyKeys(true, false);
     }
 
     @Test
@@ -95,6 +91,18 @@ public class DefinitionTest {
         } catch (RecognitionException re) {
             final Token token = re.getOffendingToken();
             fail("index=%s", token.getCharPositionInLine());
+        }
+    }
+
+    @Test
+    public void undefinedUsage() {
+        try {
+            final Evaluation eval = parser.parse("missingVar");
+            fail("Should not succeed");
+        } catch (UndefinedIdentifierException uie) {
+            assertThat(uie.getMessage()).contains("missingVar");
+        } catch (RuntimeException re) {
+            throw new AssertionError("Wrong exception type", re);
         }
     }
 }
