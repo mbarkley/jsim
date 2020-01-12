@@ -1,11 +1,15 @@
 package ca.mbarkley.jsim.cli;
 
+import ca.mbarkley.jsim.eval.Context;
+import ca.mbarkley.jsim.eval.Evaluation;
 import ca.mbarkley.jsim.eval.Parser;
+import ca.mbarkley.jsim.eval.UndefinedIdentifierException;
 import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 
 import java.io.Console;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ConsoleProcessor {
     private final Parser parser;
@@ -18,6 +22,7 @@ public class ConsoleProcessor {
 
 
     public void process(Console console) {
+        final Map<String, Expression<?>> definitions = new HashMap<>();
         do {
             console.printf("$ ");
             final String line = console.readLine();
@@ -25,13 +30,16 @@ public class ConsoleProcessor {
                 break;
             } else {
                 try {
-                    final List<Expression<?>> stmts = parser.parse(line).getExpressions();
-                    for (var stmt : stmts) {
-                        final String sortedHistogram = displayer.createSortedHistogram(stmt.toString(), stmt.events());
+                    final Evaluation eval = parser.parse(new Context(definitions), line);
+                    definitions.putAll(eval.getContext().getDefinitions());
+                    for (var expression : eval.getExpressions()) {
+                        final String sortedHistogram = displayer.createSortedHistogram(expression.toString(), expression.events());
                         console.printf("%s", sortedHistogram);
                     }
                 } catch (RecognitionException re) {
                     console.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());
+                } catch (UndefinedIdentifierException uie) {
+                    console.printf("%s\n", uie.getMessage());
                 } catch (RuntimeException re) {
                     console.printf("Problem while evaluating statement: %s\n", re.getMessage());
                 }

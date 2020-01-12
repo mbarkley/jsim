@@ -27,6 +27,10 @@ public class Parser {
     private static final Pattern ROLL = Pattern.compile("(\\d+)?[dD](\\d+)(?:([HhLl])(\\d+))?");
 
     public Evaluation parse(String expression) {
+        return parse(new Context(Map.of()), expression);
+    }
+
+    public Evaluation parse(Context evalCtx, String expression) {
         final ANTLRInputStream is = new ANTLRInputStream(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
@@ -42,7 +46,7 @@ public class Parser {
 
         final ArithmeticExpressionVisitor arithmeticExpressionVisitor = new ArithmeticExpressionVisitor();
         final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor(arithmeticExpressionVisitor);
-        final StatementVisitor visitor = new StatementVisitor(new ExpressionVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor));
+        final StatementVisitor visitor = new StatementVisitor(evalCtx, new ExpressionVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor));
 
         return visitor.visit(ctx);
     }
@@ -63,6 +67,7 @@ public class Parser {
 
     @RequiredArgsConstructor
     private static class StatementVisitor extends JSimParserBaseVisitor<Evaluation> {
+        private final Context initialEvalCtx;
         private final ExpressionVisitor expressionVisitor;
 
         @Override
@@ -70,7 +75,7 @@ public class Parser {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else {
-                final Map<String, Expression<?>> definitions = new HashMap<>();
+                final Map<String, Expression<?>> definitions = new HashMap<>(initialEvalCtx.getDefinitions());
                 final List<Expression<?>> expressions = new ArrayList<>();
                 for (var stmt : ctx.statement()) {
                     final Evaluation evaluation = visitStatement(new Context(definitions), stmt);
