@@ -5,13 +5,18 @@ import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
-import org.antlr.v4.runtime.RecognitionException;
+import ca.mbarkley.jsim.model.Expression.Constant;
+import ca.mbarkley.jsim.model.Type;
+import ca.mbarkley.jsim.model.Vector;
+import ca.mbarkley.jsim.model.Vector.Dimension;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+import static ca.mbarkley.jsim.model.Types.INTEGER_TYPE;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -164,6 +169,28 @@ public class DefinitionTest {
                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
         assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0, offset));
+    }
+
+    @Test
+    public void evaluateConstantVectorDefinition() {
+        final Evaluation eval = parser.parse("define three = 3; define vector = { 'one : 1, 'two : 2, 'three : three }; vector");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'one", INTEGER_TYPE, "'two", INTEGER_TYPE, "'three", INTEGER_TYPE)));
+        final List<Dimension<?>> coordinate = List.of(
+                new Dimension<>( "'one", new Constant<>(INTEGER_TYPE, 1)),
+                new Dimension<>("'two", new Constant<>(INTEGER_TYPE, 2)),
+                new Dimension<>("'three", new Constant<>(INTEGER_TYPE, 3))
+        );
+        final Vector vector = new Vector(type, coordinate);
+        assertThat(result).hasEntrySatisfying(vector, prob -> assertThat(prob).isCloseTo(1.0, offset));
     }
 
     @Test(expected = DiceTypeException.class)

@@ -22,7 +22,7 @@ public abstract class Expression<T extends Comparable<T>> {
         return events().collect(toMap(Event::getValue, identity()));
     }
 
-    public abstract Class<T> getType();
+    public abstract Type<T> getType();
 
     @Value
     @EqualsAndHashCode(callSuper = false)
@@ -40,7 +40,7 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public Class<T> getType() {
+        public Type<T> getType() {
             return subExpression.getType();
         }
     }
@@ -48,7 +48,13 @@ public abstract class Expression<T extends Comparable<T>> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class Constant<T extends Comparable<T>> extends Expression<T> {
+        Type<T> type;
         T value;
+
+        public Constant(Type<T> type, T value) {
+            this.type = type;
+            this.value = value;
+        }
 
         @Override
         public Stream<Event<T>> events() {
@@ -56,9 +62,8 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public Class<T> getType() {
-            //noinspection unchecked
-            return (Class<T>) value.getClass();
+        public Type<T> getType() {
+            return type;
         }
 
         @Override
@@ -70,7 +75,7 @@ public abstract class Expression<T extends Comparable<T>> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class EventList<T extends Comparable<T>> extends Expression<T> {
-        Class<T> type;
+        Type<T> type;
         List<Event<T>> values;
 
         @Override
@@ -79,7 +84,7 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public Class<T> getType() {
+        public Type<T> getType() {
             return type;
         }
     }
@@ -102,8 +107,8 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public Class<Boolean> getType() {
-            return Boolean.class;
+        public Type<Boolean> getType() {
+            return Types.BOOLEAN_TYPE;
         }
 
         @Override

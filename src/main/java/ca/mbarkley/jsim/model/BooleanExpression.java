@@ -14,8 +14,8 @@ import static java.lang.String.format;
 public abstract class BooleanExpression extends Expression<Boolean> {
 
     @Override
-    public Class<Boolean> getType() {
-        return Boolean.class;
+    public Type<Boolean> getType() {
+        return Types.BOOLEAN_TYPE;
     }
 
     @Value
@@ -41,8 +41,8 @@ public abstract class BooleanExpression extends Expression<Boolean> {
         }
     }
 
-    public static Constant<Boolean> TRUE = new Constant<>(true);
-    public static Constant<Boolean> FALSE = new Constant<>(false);
+    public static Constant<Boolean> TRUE = new Constant<>(Types.BOOLEAN_TYPE, true);
+    public static Constant<Boolean> FALSE = new Constant<>(Types.BOOLEAN_TYPE, false);
 
     public interface BooleanOperators {
         public static final BinaryOperator<Boolean, Boolean> equality = BinaryOperator.equality(Boolean.class);

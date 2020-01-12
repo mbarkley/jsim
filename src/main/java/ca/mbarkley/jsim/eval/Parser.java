@@ -3,17 +3,18 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
-import ca.mbarkley.jsim.model.BinaryOperator;
-import ca.mbarkley.jsim.model.BooleanExpression;
+import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
-import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
 import ca.mbarkley.jsim.model.Expression.ComparisonExpression;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Expression.EventList;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
+import ca.mbarkley.jsim.model.Vector;
+import ca.mbarkley.jsim.model.Type.VectorType;
+import ca.mbarkley.jsim.model.Vector.Dimension;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.*;
@@ -120,7 +121,7 @@ public class Parser {
         }
 
         private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
-            final Map<Class<?>, List<?>> valuesByType = ctx.diceSideDeclaration()
+            final Map<Type<?>, List<?>> valuesByType = ctx.diceSideDeclaration()
                                                            .stream()
                                                            .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
                                                            .collect(groupingBy(Constant::getType, collectingAndThen(toList(), c -> c.stream()
@@ -132,10 +133,10 @@ public class Parser {
             } else if (valuesByType.keySet().size() > 1) {
                 throw new EvaluationException.DiceTypeException(valuesByType.keySet()
                                                                             .stream()
-                                                                            .map(Class::getSimpleName)
+                                                                            .map(Type::getName)
                                                                             .collect(toSet()));
             } else {
-                final Class<?> type = valuesByType.keySet().iterator().next();
+                final Type<?> type = valuesByType.keySet().iterator().next();
                 final double prob = 1.0 / (double) ctx.diceSideDeclaration().size();
                 final List<Event<?>> events = valuesByType.values()
                                                           .stream()
@@ -154,13 +155,13 @@ public class Parser {
 
         private Constant<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
             if (ctx.NUMBER() != null) {
-                return new Constant<>(Integer.parseInt(ctx.NUMBER().getText()));
+                return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(ctx.NUMBER().getText()));
             } else if (ctx.TRUE() != null) {
                 return BooleanExpression.TRUE;
             } else if (ctx.FALSE() != null) {
                 return BooleanExpression.FALSE;
             } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(ctx.SYMBOL().getText());
+                return new Constant<>(Types.SYMBOL_TYPE, ctx.SYMBOL().getText());
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
@@ -183,9 +184,68 @@ public class Parser {
                 final String identifier = ctx.IDENTIFIER().getText();
                 return lookupIdentifier(evalCtx, identifier);
             } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(ctx.SYMBOL().getText());
+                return new Constant<>(Types.SYMBOL_TYPE, ctx.SYMBOL().getText());
+            } else if (ctx.vectorExpression() != null) {
+                return visitVectorExpression(evalCtx, ctx.vectorExpression());
             } else {
                 throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx.getText()));
+            }
+        }
+
+        private Expression<?> visitVectorExpression(Context evalCtx, JSimParser.VectorExpressionContext ctx) {
+            if (ctx.vectorExpression().size() == 2) {
+                throw new UnsupportedOperationException();
+            } else if (ctx.vectorTerm() != null) {
+                return visitVectorTerm(evalCtx, ctx.vectorTerm());
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
+        }
+
+        private Expression<?> visitVectorTerm(Context evalCtx, JSimParser.VectorTermContext ctx) {
+            if (ctx.IDENTIFIER() != null) {
+                return lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+            } else if (ctx.vectorLiteral() != null) {
+                return visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
+        }
+
+        private Expression<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
+            SortedMap<String, Type<?>> typesByDimName = new TreeMap<>();
+            List<Dimension<?>> dimensions = new ArrayList<>(ctx.dimension().size());
+            for (var dim : ctx.dimension()) {
+                final String name = dim.SYMBOL().getText();
+                final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
+                typesByDimName.compute(name, (k, v) -> {
+                    if (v == null) {
+                        return value.getType();
+                    } else {
+                        throw new EvaluationException.DuplicateDimensionDeclarationException(ctx, k);
+                    }
+                });
+                dimensions.add(new Dimension<>(name, value));
+            }
+
+            final VectorType vectorType = new VectorType(typesByDimName);
+            return new Constant<>(vectorType, new Vector(vectorType, dimensions));
+        }
+
+        private Constant<?> visitDimensionValue(Context evalCtx, JSimParser.DimensionValueContext ctx) {
+            if (ctx.IDENTIFIER() != null) {
+                final Expression<Integer> identifierValue = lookupIdentifier(evalCtx, Types.INTEGER_TYPE, ctx.IDENTIFIER().getText());
+                if (identifierValue instanceof Constant) {
+                    return (Constant<?>) identifierValue;
+                } else {
+                    throw new EvaluationException(format("Invalid identifier [%s] in vector literal: expected constant but identifier had expression value [%s]", ctx.IDENTIFIER().getText(), identifierValue));
+                }
+            } else if (ctx.NUMBER() != null) {
+                // OpenJDK cannot compile with type argument here
+                final Integer value = Integer.parseInt(ctx.NUMBER().getText());
+                return new Constant<>(Types.INTEGER_TYPE, value);
+            } else {
+                throw new IllegalStateException(ctx.getText());
             }
         }
     }
@@ -236,9 +296,9 @@ public class Parser {
 
         private Expression<String> visitSymbolTerm(Context evalCtx, JSimParser.SymbolTermContext ctx) {
             if (ctx.SYMBOL() != null) {
-                return new Constant<>(ctx.getText());
+                return new Constant<>(Types.SYMBOL_TYPE, ctx.getText());
             } else if (ctx.IDENTIFIER() != null) {
-                return lookupIdentifier(evalCtx, String.class, ctx.IDENTIFIER().getText());
+                return lookupIdentifier(evalCtx, Types.SYMBOL_TYPE, ctx.IDENTIFIER().getText());
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
@@ -251,7 +311,7 @@ public class Parser {
                 return BooleanExpression.FALSE;
             } else if (ctx.IDENTIFIER() != null) {
                 final String identifier = ctx.IDENTIFIER().getText();
-                return lookupIdentifier(evalCtx, Boolean.class, identifier);
+                return lookupIdentifier(evalCtx, Types.BOOLEAN_TYPE, identifier);
             } else {
                 throw new IllegalStateException();
             }
@@ -277,7 +337,7 @@ public class Parser {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.NUMBER() != null) {
-                return new Constant<>(Integer.parseInt(ctx.NUMBER().getText()));
+                return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(ctx.NUMBER().getText()));
             } else if (ctx.ROLL() != null) {
                 final Matcher matcher = ROLL.matcher(ctx.ROLL().getText());
                 if (matcher.matches()) {
@@ -300,8 +360,7 @@ public class Parser {
                 throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
             } else if (ctx.IDENTIFIER() != null) {
                 final String identifier = ctx.IDENTIFIER().getText();
-                final Class<Integer> expectedType = Integer.class;
-                return lookupIdentifier(evalCtx, expectedType, identifier);
+                return lookupIdentifier(evalCtx, Types.INTEGER_TYPE, identifier);
             } else {
                 throw new IllegalStateException(ctx.toString());
             }
@@ -322,15 +381,15 @@ public class Parser {
         }
     }
 
-    static <T extends Comparable<T>> Expression<T> lookupIdentifier(Context evalCtx, Class<T> expectedType, String identifier) {
+    static <T extends Comparable<T>> Expression<T> lookupIdentifier(Context evalCtx, Type<T> expectedType, String identifier) {
         final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
         if (expression != null) {
-            final Class<?> type = expression.getType();
+            final Type<?> type = expression.getType();
             if (expectedType.equals(type)) {
                 //noinspection unchecked
                 return (Expression<T>) expression;
             } else {
-                throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getSimpleName(), type.getSimpleName()));
+                throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getName(), type.getName()));
             }
         } else {
             throw new EvaluationException.UndefinedIdentifierException(identifier);

@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim.eval;
 
+import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.Expression;
 
 import java.util.Set;
@@ -37,6 +38,12 @@ public class EvaluationException extends RuntimeException {
     public static class EqualityTypeException extends EvaluationException {
         public EqualityTypeException(Expression<?> left, Expression<?> right) {
             super(format("Left [%s] and right [%s] sides of equality have different types [%s] and [%s]", left, right, left.getType(), right.getType()));
+        }
+    }
+
+    public static class DuplicateDimensionDeclarationException extends EvaluationException {
+        public DuplicateDimensionDeclarationException(JSimParser.VectorLiteralContext ctx, String duplicateName) {
+            super(format("Dimension [%s] declared twice in vector [%s]", duplicateName, ctx.getText()));
         }
     }
 }
