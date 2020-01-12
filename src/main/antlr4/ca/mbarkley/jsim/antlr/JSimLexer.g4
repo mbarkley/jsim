@@ -20,7 +20,13 @@ MINUS : '-';
 
 LB : '(';
 
-RB: ')';
+RB : ')';
+
+LSB : '[';
+
+RSB : ']';
+
+COMMA : ',';
 
 // Relation symbols
 LT : '<';

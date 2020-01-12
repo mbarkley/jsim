@@ -80,7 +80,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), PLUS, new Expression.Constant(1)));
     }
 
     @Test
@@ -89,7 +89,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(1, 6), Operator.MINUS, new Expression.Constant(1)));
     }
 
     @Test
@@ -98,7 +98,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new Expression.Constant(1)));
     }
 
     @Test
@@ -107,7 +107,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Constant(1)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.MINUS, new Expression.Constant(1)));
     }
 
     @Test
@@ -116,7 +116,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Constant(2)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.TIMES, new Expression.Constant(2)));
     }
 
     @Test
@@ -125,7 +125,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Constant(2)));
+        assertThat(result).containsExactly(new BinaryOpExpression(new HomogeneousDicePool(3, 8), Operator.DIVIDE, new Expression.Constant(2)));
     }
 
     @Test
@@ -137,7 +137,7 @@ public class ParserTest {
         final BinaryOpExpression expected = new BinaryOpExpression(
                 new BinaryOpExpression(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
                 PLUS,
-                new Constant(1));
+                new Expression.Constant(1));
         assertThat(result).containsExactly(expected);
     }
 
@@ -184,9 +184,9 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final IntegerExpression expected = new BinaryOpExpression(
-                new BinaryOpExpression(new Constant(2), Operator.MINUS, new Constant(1)),
+                new BinaryOpExpression(new Expression.Constant(2), Operator.MINUS, new Expression.Constant(1)),
                 PLUS,
-                new Constant(1)
+                new Expression.Constant(1)
         );
         assertThat(result).containsExactly(expected);
     }
@@ -198,12 +198,12 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final IntegerExpression expected = new BinaryOpExpression(
-                new Constant(2),
+                new Expression.Constant(2),
                 TIMES,
                 new Expression.Bracketed(new BinaryOpExpression(
                         new HomogeneousDicePool(2, 6),
                         PLUS,
-                        new Constant(1)
+                        new Expression.Constant(1)
                 ))
         );
         assertThat(result).containsExactly(expected);

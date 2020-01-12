@@ -4,6 +4,7 @@ import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -40,6 +41,45 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Class<T> getType() {
             return subExpression.getType();
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class Constant<T extends Comparable<T>> extends Expression<T> {
+        T value;
+
+        @Override
+        public Stream<Event<T>> events() {
+            return Stream.of(new Event<>(value, 1.0));
+        }
+
+        @Override
+        public Class<T> getType() {
+            //noinspection unchecked
+            return (Class<T>) value.getClass();
+        }
+
+        @Override
+        public String toString() {
+            return "" + value;
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class EventList<T extends Comparable<T>> extends Expression<T> {
+        Class<T> type;
+        List<Event<T>> values;
+
+        @Override
+        public Stream<Event<T>> events() {
+            return values.stream();
+        }
+
+        @Override
+        public Class<T> getType() {
+            return type;
         }
     }
 }

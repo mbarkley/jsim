@@ -1,9 +1,6 @@
 package ca.mbarkley.jsim.cli;
 
-import ca.mbarkley.jsim.eval.Context;
-import ca.mbarkley.jsim.eval.Evaluation;
-import ca.mbarkley.jsim.eval.Parser;
-import ca.mbarkley.jsim.eval.UndefinedIdentifierException;
+import ca.mbarkley.jsim.eval.*;
 import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 
@@ -38,7 +35,7 @@ public class ConsoleProcessor {
                     }
                 } catch (RecognitionException re) {
                     console.printf("Invalid symbol: line %d, position %d\n", re.getOffendingToken().getLine(), re.getOffendingToken().getCharPositionInLine());
-                } catch (UndefinedIdentifierException uie) {
+                } catch (EvaluationException.UndefinedIdentifierException uie) {
                     console.printf("%s\n", uie.getMessage());
                 } catch (RuntimeException re) {
                     console.printf("Problem while evaluating statement: %s\n", re.getMessage());

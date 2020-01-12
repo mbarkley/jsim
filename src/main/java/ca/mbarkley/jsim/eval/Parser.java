@@ -3,10 +3,17 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
-import ca.mbarkley.jsim.model.BooleanExpression.*;
+import ca.mbarkley.jsim.model.BooleanExpression;
+import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
+import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperator;
+import ca.mbarkley.jsim.model.BooleanExpression.Comparator;
+import ca.mbarkley.jsim.model.BooleanExpression.ComparisonExpression;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
+import ca.mbarkley.jsim.model.Expression.Constant;
+import ca.mbarkley.jsim.model.Expression.EventList;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
+import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
@@ -14,14 +21,13 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.*;
 
 public class Parser {
     private static final Pattern ROLL = Pattern.compile("(\\d+)?[dD](\\d+)(?:([HhLl])(\\d+))?");
@@ -97,13 +103,68 @@ public class Parser {
 
         public Evaluation visitDefinition(Context evalCtx, JSimParser.DefinitionContext ctx) {
             final String identifier = ctx.IDENTIFIER().getText();
-            final Expression<?> expression = expressionVisitor.visitExpression(evalCtx, ctx.expression());
+            final Expression<?> expression = visitDefinitionBody(evalCtx, ctx.definitionBody());
 
             Map<String, Expression<?>> modifiedDefintions = new HashMap<>(evalCtx.getDefinitions());
             modifiedDefintions.put(identifier, expression);
             final Context newEvalCtx = new Context(modifiedDefintions);
 
             return new Evaluation(newEvalCtx, List.of());
+        }
+
+        private Expression<?> visitDefinitionBody(Context evalCtx, JSimParser.DefinitionBodyContext ctx) {
+            if (ctx.expression() != null) {
+                return expressionVisitor.visitExpression(evalCtx, ctx.expression());
+            } else if (ctx.diceDeclaration() != null) {
+                return visitDiceDeclaration(evalCtx, ctx.diceDeclaration());
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
+        }
+
+        private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
+            final Map<Class<?>, List<?>> valuesByType = ctx.diceSideDeclaration()
+                                                           .stream()
+                                                           .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
+                                                           .collect(groupingBy(Constant::getType, collectingAndThen(toList(), c -> c.stream()
+                                                                                                                                    .map(Constant::getValue)
+                                                                                                                                    .collect(toList()))));
+
+            if (valuesByType.isEmpty()) {
+                throw new IllegalStateException("Cannot have empty dice declaration");
+            } else if (valuesByType.keySet().size() > 1) {
+                throw new EvaluationException.DiceTypeException(valuesByType.keySet()
+                                                                            .stream()
+                                                                            .map(Class::getSimpleName)
+                                                                            .collect(toSet()));
+            } else {
+                final Class<?> type = valuesByType.keySet().iterator().next();
+                final double prob = 1.0 / (double) ctx.diceSideDeclaration().size();
+                final List<Event<?>> events = valuesByType.values()
+                                                          .stream()
+                                                          .flatMap(Collection::stream)
+                                                          .map(v -> new Event<>(v, prob))
+                                                          .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
+                                                          .entrySet()
+                                                          .stream()
+                                                          .map(e -> new Event<>(e.getKey(), e.getValue()))
+                                                          .collect(toList());
+
+                //noinspection unchecked
+                return new EventList(type, events);
+            }
+        }
+
+        private Constant<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
+            if (ctx.NUMBER() != null) {
+                return new Constant<>(Integer.parseInt(ctx.NUMBER().getText()));
+            } else if (ctx.TRUE() != null) {
+                return BooleanExpression.TRUE;
+            } else if (ctx.FALSE() != null) {
+                return BooleanExpression.FALSE;
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
         }
     }
 
@@ -167,9 +228,9 @@ public class Parser {
 
         public Expression<Boolean> visitBooleanTerm(Context evalCtx, JSimParser.BooleanTermContext ctx) {
             if (ctx.TRUE() != null) {
-                return BooleanConstant.TRUE;
+                return BooleanExpression.TRUE;
             } else if (ctx.FALSE() != null) {
-                return BooleanConstant.FALSE;
+                return BooleanExpression.FALSE;
             } else if (ctx.IDENTIFIER() != null) {
                 final String identifier = ctx.IDENTIFIER().getText();
                 return lookupIdentifier(evalCtx, Boolean.class, identifier);
@@ -253,7 +314,7 @@ public class Parser {
                 throw new IllegalStateException(format("Expected [%s] to be %s value but was [%s]", identifier, expectedType.getSimpleName(), type.getSimpleName()));
             }
         } else {
-            throw new UndefinedIdentifierException(identifier);
+            throw new EvaluationException.UndefinedIdentifierException(identifier);
         }
     }
 
@@ -262,7 +323,7 @@ public class Parser {
         if (expression != null) {
             return expression;
         } else {
-            throw new UndefinedIdentifierException(identifier);
+            throw new EvaluationException.UndefinedIdentifierException(identifier);
         }
     }
 }

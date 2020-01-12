@@ -38,10 +38,6 @@ public class Event<T> {
                 .map(e -> new Event<>(e.getKey(), e.getValue()));
     }
 
-    private static <T> Event<T> merge(Event<T> e1, Event<T> e2) {
-        return new Event<>(e1.value, e1.getProbability() + e2.getProbability());
-    }
-
     public static Stream<Event<Integer>> singleDieEvents(int diceSides) {
         return unfold(new Event<>(1, 1.0 / ((double) diceSides)), e -> {
             if (e.getValue() < diceSides) {

@@ -1,13 +1,10 @@
 package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.eval.Evaluation;
+import ca.mbarkley.jsim.eval.EvaluationException;
+import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.eval.Parser;
-import ca.mbarkley.jsim.eval.UndefinedIdentifierException;
 import ca.mbarkley.jsim.model.Expression;
-import ca.mbarkley.jsim.prob.Event;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Token;
-import org.assertj.core.api.Assertions;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
 
@@ -74,24 +71,19 @@ public class DefinitionTest {
 
     @Test
     public void evaluateBooleanWithAmbiguousCallSite() {
-        try {
-            final Evaluation eval = parser.parse("define myTest = d6 > 3; myTest");
+        final Evaluation eval = parser.parse("define myTest = d6 > 3; myTest");
 
-            assertThat(eval.getExpressions()).hasSize(1);
-            final Map<Boolean, Double> result = eval.getExpressions()
-                                                    .get(0)
-                                                    .calculateResults()
-                                                    .entrySet()
-                                                    .stream()
-                                                    .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
-            final Offset<Double> offset = offset(0.0001);
-            assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(0.5, offset))
-                              .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(0.5, offset))
-                              .containsOnlyKeys(true, false);
-        } catch (RecognitionException re) {
-            final Token token = re.getOffendingToken();
-            fail("index=%s", token.getCharPositionInLine());
-        }
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .containsOnlyKeys(true, false);
     }
 
     @Test
@@ -99,10 +91,50 @@ public class DefinitionTest {
         try {
             final Evaluation eval = parser.parse("missingVar");
             fail("Should not succeed");
-        } catch (UndefinedIdentifierException uie) {
+        } catch (EvaluationException.UndefinedIdentifierException uie) {
             assertThat(uie.getMessage()).contains("missingVar");
         } catch (RuntimeException re) {
             throw new AssertionError("Wrong exception type", re);
         }
+    }
+
+    @Test
+    public void evaluateCustomIntegerDiceDefinition() {
+        final Evaluation eval = parser.parse("define myTest = [1, 3, 5]; myTest + 1");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Integer, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0/3.0, offset))
+                          .hasEntrySatisfying(4, prob -> assertThat(prob).isCloseTo(1.0/3.0, offset))
+                          .hasEntrySatisfying(6, prob -> assertThat(prob).isCloseTo(1.0/3.0, offset))
+                          .containsOnlyKeys(2, 4, 6);
+    }
+
+    @Test
+    public void evaluateCustomBooleanDiceDefinition() {
+        final Evaluation eval = parser.parse("define myTest = [true, true, false]; myTest");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(2.0/3.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/3.0, offset))
+                          .containsOnlyKeys(true, false);
+    }
+
+    @Test(expected = DiceTypeException.class)
+    public void mismatchedDiceType() {
+        parser.parse("define myTest = [1, 3, true]; myTest + 1");
     }
 }

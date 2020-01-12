@@ -24,22 +24,6 @@ public abstract class IntegerExpression extends Expression<Integer> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class Constant extends IntegerExpression {
-        int value;
-
-        @Override
-        public Stream<Event<Integer>> events() {
-            return Stream.of(new Event<>(value, 1.0));
-        }
-
-        @Override
-        public String toString() {
-            return "" + value;
-        }
-    }
-
-    @Value
-    @EqualsAndHashCode(callSuper = false)
     public static class HighDice extends IntegerExpression {
         HomogeneousDicePool dicePool;
         int numberOfDice;

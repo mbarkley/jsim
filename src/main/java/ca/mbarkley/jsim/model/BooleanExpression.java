@@ -64,25 +64,8 @@ public abstract class BooleanExpression extends Expression<Boolean> {
         }
     }
 
-
-    @Value
-    @EqualsAndHashCode(callSuper = false)
-    public static class BooleanConstant extends BooleanExpression {
-        public static BooleanConstant TRUE = new BooleanConstant(true);
-        public static BooleanConstant FALSE = new BooleanConstant(false);
-
-        boolean value;
-
-        @Override
-        public Stream<Event<Boolean>> events() {
-            return Stream.of(new Event<>(value, 1.0));
-        }
-
-        @Override
-        public String toString() {
-            return String.valueOf(value);
-        }
-    }
+    public static Constant<Boolean> TRUE = new Constant<>(true);
+    public static Constant<Boolean> FALSE = new Constant<>(false);
 
     public enum BooleanOperator implements HasSymbol<BooleanOperator> {
         AND("and", 1) {
