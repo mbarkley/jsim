@@ -129,7 +129,7 @@ public abstract class IntegerExpression extends Expression<Integer> {
         }
     }
 
-    public enum Operator implements HasSymbol<Operator>, Comparable<Operator> {
+    public enum Operator implements HasSymbol<Operator> {
         DIVIDE("/", 2) {
             @Override
             public int apply(int left, int right) {

@@ -178,7 +178,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.equality(Integer.class), right);
+        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.equality(), right);
         assertThat(result).containsExactly(expected);
     }
 

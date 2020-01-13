@@ -8,12 +8,12 @@ import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Type;
 import ca.mbarkley.jsim.model.Vector;
-import ca.mbarkley.jsim.model.Vector.Dimension;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import static ca.mbarkley.jsim.model.Types.INTEGER_TYPE;
@@ -184,11 +184,11 @@ public class DefinitionTest {
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
         final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'one", INTEGER_TYPE, "'two", INTEGER_TYPE, "'three", INTEGER_TYPE)));
-        final List<Dimension<?>> coordinate = List.of(
-                new Dimension<>( "'one", new Constant<>(INTEGER_TYPE, 1)),
-                new Dimension<>("'two", new Constant<>(INTEGER_TYPE, 2)),
-                new Dimension<>("'three", new Constant<>(INTEGER_TYPE, 3))
-        );
+        final SortedMap<String, Constant<?>> coordinate = new TreeMap<>(Map.of(
+                 "'one", new Constant<>(INTEGER_TYPE, 1),
+                "'two", new Constant<>(INTEGER_TYPE, 2),
+                "'three", new Constant<>(INTEGER_TYPE, 3)
+        ));
         final Vector vector = new Vector(type, coordinate);
         assertThat(result).hasEntrySatisfying(vector, prob -> assertThat(prob).isCloseTo(1.0, offset));
     }
@@ -206,14 +206,14 @@ public class DefinitionTest {
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
         final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
-        final List<Dimension<?>> coordinate1 = List.of(
-                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
-                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 2))
-        );
-        final List<Dimension<?>> coordinate2 = List.of(
-                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 2)),
-                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 1))
-        );
+        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                 "'dmg", new Constant<>(INTEGER_TYPE, 1),
+                "'range", new Constant<>(INTEGER_TYPE, 2)
+        ));
+        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                 "'dmg", new Constant<>(INTEGER_TYPE, 2),
+                "'range", new Constant<>(INTEGER_TYPE, 1)
+        ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);
         assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.5, offset))
@@ -234,14 +234,14 @@ public class DefinitionTest {
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
         final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
-        final List<Dimension<?>> coordinate1 = List.of(
-                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
-                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 0))
-        );
-        final List<Dimension<?>> coordinate2 = List.of(
-                new Dimension<>( "'dmg", new Constant<>(INTEGER_TYPE, 1)),
-                new Dimension<>("'range", new Constant<>(INTEGER_TYPE, 1))
-        );
+        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                 "'dmg", new Constant<>(INTEGER_TYPE, 1),
+                "'range", new Constant<>(INTEGER_TYPE, 0)
+        ));
+        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                "'dmg", new Constant<>(INTEGER_TYPE, 1),
+                "'range", new Constant<>(INTEGER_TYPE, 1)
+        ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);
         assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.5, offset))
@@ -262,15 +262,15 @@ public class DefinitionTest {
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
         final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'roll", INTEGER_TYPE)));
-        final List<Vector.Dimension<?>> coordinate1 = List.of(
-                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 2))
-        );
-        final List<Vector.Dimension<?>> coordinate2 = List.of(
-                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 3))
-        );
-        final List<Vector.Dimension<?>> coordinate3 = List.of(
-                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 4))
-        );
+        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                "'roll", new Expression.Constant<>(INTEGER_TYPE, 2)
+        ));
+        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                "'roll", new Expression.Constant<>(INTEGER_TYPE, 3)
+        ));
+        final SortedMap<String, Constant<?>> coordinate3 = new TreeMap<>(Map.of(
+                "'roll", new Expression.Constant<>(INTEGER_TYPE, 4)
+        ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);
         final Vector vector3 = new Vector(type, coordinate3);

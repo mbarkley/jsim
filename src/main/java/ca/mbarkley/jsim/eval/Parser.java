@@ -15,7 +15,6 @@ import ca.mbarkley.jsim.model.Expression.EventList;
 import ca.mbarkley.jsim.model.IntegerExpression.*;
 import ca.mbarkley.jsim.model.Vector;
 import ca.mbarkley.jsim.model.Type.VectorType;
-import ca.mbarkley.jsim.model.Vector.Dimension;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.*;
@@ -122,7 +121,6 @@ public class Parser {
             }
         }
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
         private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
             final List<Constant<?>> values = ctx.diceSideDeclaration()
                                                 .stream()
@@ -135,28 +133,27 @@ public class Parser {
             if (values.isEmpty()) {
                 throw new IllegalStateException("Cannot have empty dice declaration");
             } else {
-                final Type<?> type = findCommonType(types);
+                final Type<?> type = Types.findCommonType(types);
                 if (type instanceof VectorType) {
                     final SortedMap<String, Type<?>> dimensions = ((VectorType) type).getDimensions();
-                    final List newValues = values.stream()
-                                                 .map(c -> {
-                                                     final Vector v = (Vector) c.getValue();
-                                                     final Map<String, Dimension<?>> dimsByName = v.getCoordinate()
-                                                                                                   .stream()
-                                                                                                   .collect(toMap(Dimension::getName, Function.identity()));
-                                                     List<Dimension<?>> newCoords = new ArrayList<>(v.getCoordinate());
-                                                     for (var entry : dimensions.entrySet()) {
-                                                         final String name = entry.getKey();
-                                                         final Type<?> dimType = entry.getValue();
-                                                         if (!dimsByName.containsKey(name)) {
-                                                             final Comparable<?> zero = dimType.zero();
-                                                             newCoords.add(new Dimension(name, new Constant(dimType, zero)));
-                                                         }
-                                                     }
+                    final List<Constant<?>> newValues =
+                            values.stream()
+                                  .map(c -> {
+                                      final Vector v = (Vector) c.getValue();
+                                      final SortedMap<String, Constant<?>> coordinate = v.getCoordinate();
+                                      final SortedMap<String, Constant<?>> newCoordinate = new TreeMap<>(coordinate);
+                                      for (var entry : dimensions.entrySet()) {
+                                          final String name = entry.getKey();
+                                          final Type<?> dimType = entry.getValue();
+                                          if (!coordinate.containsKey(name)) {
+                                              final Comparable<?> zero = dimType.zero();
+                                              newCoordinate.put(name, new Constant(dimType, zero));
+                                          }
+                                      }
 
-                                                     return new Constant(type, new Vector((VectorType) type, newCoords));
-                                                 })
-                                                 .collect(toList());
+                                      return new Constant<>((VectorType) type, new Vector((VectorType) type, newCoordinate));
+                                  })
+                                  .collect(toList());
 
                     return generateEventList(ctx, type, newValues);
                 } else {
@@ -178,35 +175,6 @@ public class Parser {
 
             //noinspection unchecked,rawtypes
             return new EventList(type, events);
-        }
-
-        private Type<?> findCommonType(Set<Type<?>> types) throws EvaluationException {
-            if (types.size() > 1) {
-                if (types.stream().allMatch(t -> t instanceof Type.VectorType)) {
-                    final SortedMap<String, Type<?>> dimensionSuperset = new TreeMap<>();
-                    for (var t : types) {
-                        final SortedMap<String, Type<?>> dimensions = ((VectorType) t).getDimensions();
-                        for (var dim : dimensions.entrySet()) {
-                            dimensionSuperset.compute(dim.getKey(), (k, v) -> {
-                                if (v == null || v.equals(dim.getValue())) {
-                                    return dim.getValue();
-                                } else {
-                                    throw new EvaluationException(
-                                            format("Dimension [%s] must have one type, but found [%s] and [%s]", dim.getKey(), v, dim.getValue()));
-                                }
-                            });
-                        }
-                    }
-
-                    return new VectorType(dimensionSuperset);
-                } else {
-                    throw new DiceTypeException(types.stream()
-                                                     .map(Type::getName)
-                                                     .collect(toSet()));
-                }
-            } else {
-                return types.iterator().next();
-            }
         }
 
         private Constant<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
@@ -272,7 +240,7 @@ public class Parser {
 
         private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
             SortedMap<String, Type<?>> typesByDimName = new TreeMap<>();
-            List<Dimension<?>> dimensions = new ArrayList<>(ctx.dimension().size());
+            SortedMap<String, Constant<?>> coordinate = new TreeMap<>();
             for (var dim : ctx.dimension()) {
                 final String name = dim.SYMBOL().getText();
                 final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
@@ -283,11 +251,11 @@ public class Parser {
                         throw new EvaluationException.DuplicateDimensionDeclarationException(ctx, k);
                     }
                 });
-                dimensions.add(new Dimension<>(name, value));
+                coordinate.put(name, value);
             }
 
             final VectorType vectorType = new VectorType(typesByDimName);
-            return new Constant<>(vectorType, new Vector(vectorType, dimensions));
+            return new Constant<>(vectorType, new Vector(vectorType, coordinate));
         }
 
         private Constant<?> visitDimensionValue(Context evalCtx, JSimParser.DimensionValueContext ctx) {
@@ -321,7 +289,7 @@ public class Parser {
                 final Expression<String> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
                 final Expression<String> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
 
-                return new ComparisonExpression<>(left, BinaryOperator.equality(String.class), right);
+                return new ComparisonExpression<>(left, BinaryOperator.equality(), right);
             } else if (ctx.booleanExpression().size() == 2) {
                 final String booleanOperatorText = ctx.getChild(1).getText();
                 final BinaryOperator<Boolean, Boolean> operator = BooleanOperators.lookup(booleanOperatorText)

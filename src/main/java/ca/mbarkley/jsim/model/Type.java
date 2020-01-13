@@ -1,13 +1,13 @@
 package ca.mbarkley.jsim.model;
 
-import ca.mbarkley.jsim.model.Vector.Dimension;
+import ca.mbarkley.jsim.model.Expression.Constant;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -15,6 +15,10 @@ import static java.lang.String.format;
 public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     public abstract T zero();
     public abstract String getName();
+
+    public Constant<T> zeroAsConstant() {
+        return new Constant<>(this, zero());
+    }
 
     @Override
     public String toString() {
@@ -28,7 +32,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
 
         @Override
         public Vector zero() {
-            return new Vector(this, List.of());
+            return new Vector(this, new TreeMap<>());
         }
 
         @Override
@@ -38,7 +42,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
 
         @Override
         public String toString() {
-            return format("Dimensions{%s}", dimensions.entrySet()
+            return format("Vector{%s}", dimensions.entrySet()
                                                   .stream()
                                                   .map(e -> e.getKey() + " : " + e.getValue())
                                                   .collect(Collectors.joining(", ")));
@@ -69,12 +73,8 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
 
         private Object lookupDimensionValue(Vector o1, Map.Entry<String, Type<?>> dim) {
             return o1.getCoordinate()
-                     .stream()
-                     .filter(d -> d.getName().equals(dim.getKey()))
-                     .map(Dimension::getValue)
-                     .map(Object.class::cast)
-                     .findFirst()
-                     .orElseGet(() -> dim.getValue().zero());
+                     .getOrDefault(dim.getKey(), dim.getValue().zeroAsConstant())
+                     .getValue();
         }
     }
 

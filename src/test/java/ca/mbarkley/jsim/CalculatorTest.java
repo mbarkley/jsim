@@ -1,7 +1,10 @@
 package ca.mbarkley.jsim;
 
+import ca.mbarkley.jsim.eval.Evaluation;
 import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
+import ca.mbarkley.jsim.model.Type;
+import ca.mbarkley.jsim.model.Vector;
 import ca.mbarkley.jsim.prob.Event;
 import org.assertj.core.data.Offset;
 import org.junit.Assert;
@@ -9,7 +12,9 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+import static ca.mbarkley.jsim.model.Types.INTEGER_TYPE;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Offset.offset;

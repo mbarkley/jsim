@@ -3,8 +3,7 @@ package ca.mbarkley.jsim.model;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import lombok.Value;
 
-import java.util.List;
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -12,12 +11,7 @@ import static java.lang.String.format;
 @Value
 public class Vector implements Comparable<Vector> {
     Type.VectorType type;
-    List<Dimension<?>> coordinate;
-
-    public Vector(Type.VectorType type, List<Dimension<?>> coordinate) {
-        this.type = type;
-        this.coordinate = coordinate;
-    }
+    SortedMap<String, Constant<?>> coordinate;
 
     @Override
     public int compareTo(Vector o) {
@@ -26,13 +20,11 @@ public class Vector implements Comparable<Vector> {
 
     @Override
     public String toString() {
-        final Map<String, Constant<?>> values = coordinate.stream()
-                                                       .collect(Collectors.toMap(Dimension::getName, Dimension::getValue));
         final String inner = type.getDimensions()
                                  .entrySet()
                                  .stream()
                                  .map(e -> {
-                                     final Constant<?> value = values.get(e.getKey());
+                                     final Constant<?> value = coordinate.get(e.getKey());
                                      if (value != null) {
                                          return e.getKey() + "=" + value.toString();
                                      } else {
