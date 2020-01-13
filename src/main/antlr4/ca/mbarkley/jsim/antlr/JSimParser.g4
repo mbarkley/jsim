@@ -20,11 +20,12 @@ diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL | vectorLiteral;
 
 expression : IDENTIFIER |
              SYMBOL |
+             vectorExpression |
              arithmeticExpression |
-             booleanExpression |
-             vectorExpression;
+             booleanExpression;
 
-vectorExpression : vectorExpression (PLUS|MINUS) vectorExpression |
+vectorExpression : LB vectorExpression RB |
+                   vectorExpression (PLUS|MINUS) vectorExpression |
                    vectorTerm;
 
 booleanExpression : LB booleanExpression RB |
