@@ -3,6 +3,7 @@ package ca.mbarkley.jsim.model;
 import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -17,7 +18,7 @@ public abstract class Types {
 
     private Types() {}
 
-    public static VectorType mergeVectorTypes(Set<VectorType> types) throws EvaluationException.UnmergableVectorTypeException {
+    public static VectorType mergeVectorTypes(Collection<VectorType> types) throws EvaluationException.UnmergableVectorTypeException {
         final SortedMap<String, Type<?>> dimensionSuperset = new TreeMap<>();
         for (var t : types) {
             final SortedMap<String, Type<?>> dimensions = t.getDimensions();

@@ -276,7 +276,7 @@ public class DefinitionTest {
         final Vector vector3 = new Vector(type, coordinate3);
         assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.25, offset))
                           .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.5, offset))
-                          .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.25, offset))
+                          .hasEntrySatisfying(vector3, prob -> assertThat(prob).isCloseTo(0.25, offset))
                           .containsOnlyKeys(vector1, vector2, vector3);
     }
 

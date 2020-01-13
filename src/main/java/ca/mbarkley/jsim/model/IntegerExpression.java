@@ -111,46 +111,28 @@ public abstract class IntegerExpression extends Expression<Integer> {
         }
     }
 
-    @Value
-    @EqualsAndHashCode(callSuper = false)
-    public static class BinaryOpExpression extends IntegerExpression {
-        Expression<Integer> left;
-        Operator operator;
-        Expression<Integer> right;
-
-        @Override
-        public Stream<Event<Integer>> events() {
-            return productOfIndependent(left.events(), right.events(), operator::apply);
-        }
-
-        @Override
-        public String toString() {
-            return format("%s %s %s", left, operator, right);
-        }
-    }
-
-    public enum Operator implements HasSymbol<Operator> {
+    public enum Operator implements BinaryOperator<Integer, Integer> {
         DIVIDE("/", 2) {
             @Override
-            public int apply(int left, int right) {
+            public Integer evaluate(Integer left, Integer right) {
                 return left / right;
             }
         },
         TIMES("*", 1) {
             @Override
-            public int apply(int left, int right) {
+            public Integer evaluate(Integer left, Integer right) {
                 return left * right;
             }
         },
         PLUS("+", 0) {
             @Override
-            public int apply(int left, int right) {
+            public Integer evaluate(Integer left, Integer right) {
                 return left + right;
             }
         },
         MINUS("-", 0) {
             @Override
-            public int apply(int left, int right) {
+            public Integer evaluate(Integer left, Integer right) {
                 return left - right;
             }
         };
@@ -170,7 +152,7 @@ public abstract class IntegerExpression extends Expression<Integer> {
             return symbol;
         }
 
-        public abstract int apply(int left, int right);
+        public abstract Integer evaluate(Integer left, Integer right);
 
         public static Optional<Operator> lookup(String symbol) {
             return HasSymbol.lookup(symbol, values());

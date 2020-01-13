@@ -4,7 +4,10 @@ import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static ca.mbarkley.jsim.model.Types.mergeVectorTypes;
 import static java.lang.String.format;
@@ -51,7 +54,7 @@ public abstract class ArithmeticOperators {
 
         @Override
         public Vector evaluate(Vector left, Vector right) {
-            final VectorType mergedType = mergeVectorTypes(Set.of(left.getType(), right.getType()));
+            final VectorType mergedType = mergeVectorTypes(List.of(left.getType(), right.getType()));
             final SortedMap<String, Constant<?>>  newCoordinates = new TreeMap<>();
             mergedType.getDimensions()
                       .entrySet()

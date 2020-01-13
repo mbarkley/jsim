@@ -116,4 +116,28 @@ public abstract class Expression<T extends Comparable<T>> {
             return format("%s %s %s", left, comparator.getSymbol(), right);
         }
     }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class BinaryOpExpression<T extends Comparable<T>> extends Expression<T> {
+        Type<T> type;
+        Expression<T> left;
+        BinaryOperator<T, T> operator;
+        Expression<T> right;
+
+        @Override
+        public Stream<Event<T>> events() {
+            return productOfIndependent(left.events(), right.events(), operator::evaluate);
+        }
+
+        @Override
+        public Type<T> getType() {
+            return type;
+        }
+
+        @Override
+        public String toString() {
+            return format("%s %s %s", left, operator, right);
+        }
+    }
 }

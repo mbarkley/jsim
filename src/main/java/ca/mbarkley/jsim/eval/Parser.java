@@ -3,16 +3,15 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
-import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BinaryOpBooleanExpression;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
-import ca.mbarkley.jsim.model.Expression.Bracketed;
-import ca.mbarkley.jsim.model.Expression.ComparisonExpression;
-import ca.mbarkley.jsim.model.Expression.Constant;
-import ca.mbarkley.jsim.model.Expression.EventList;
-import ca.mbarkley.jsim.model.IntegerExpression.*;
+import ca.mbarkley.jsim.model.Expression.*;
+import ca.mbarkley.jsim.model.IntegerExpression.HighDice;
+import ca.mbarkley.jsim.model.IntegerExpression.HomogeneousDicePool;
+import ca.mbarkley.jsim.model.IntegerExpression.LowDice;
+import ca.mbarkley.jsim.model.IntegerExpression.Operator;
 import ca.mbarkley.jsim.model.Vector;
 import ca.mbarkley.jsim.model.Type.VectorType;
 import ca.mbarkley.jsim.prob.Event;
@@ -21,7 +20,6 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -220,7 +218,17 @@ public class Parser {
 
         private Expression<?> visitVectorExpression(Context evalCtx, JSimParser.VectorExpressionContext ctx) {
             if (ctx.vectorExpression().size() == 2) {
-                throw new UnsupportedOperationException();
+                final Expression<?> left = visitVectorExpression(evalCtx, ctx.vectorExpression(0));
+                final Expression<?> right = visitVectorExpression(evalCtx, ctx.vectorExpression(1));
+                final String opSymbol = ctx.getChild(1).getText();
+                final VectorType mergedType = Types.mergeVectorTypes(List.of((VectorType) left.getType(), (VectorType) right.getType()));
+
+                final BinaryOperator<Vector, Vector> op = ArithmeticOperators.lookupVectorOp(opSymbol)
+                                                                             .orElseThrow(() -> new EvaluationException(format("Unknown vector operation [%s]", opSymbol)));
+
+                return new BinaryOpExpression(mergedType, left, op, right);
+            } else if (ctx.vectorExpression().size() == 1) {
+                return new Bracketed<>(visitVectorExpression(evalCtx, ctx.vectorExpression(0)));
             } else if (ctx.vectorTerm() != null) {
                 return visitVectorTerm(evalCtx, ctx.vectorTerm());
             } else {
@@ -397,7 +405,7 @@ public class Parser {
             final Expression<Integer> right = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
             final Operator sign = getOperator(ctx);
 
-            return new BinaryOpExpression(left, sign, right);
+            return new BinaryOpExpression<>(Types.INTEGER_TYPE, left, sign, right);
         }
 
         private Operator getOperator(JSimParser.ArithmeticExpressionContext ctx) {
