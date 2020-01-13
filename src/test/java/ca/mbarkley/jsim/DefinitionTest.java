@@ -249,6 +249,37 @@ public class DefinitionTest {
                           .containsOnlyKeys(vector1, vector2);
     }
 
+    @Test
+    public void addVectors() {
+        final Evaluation eval = parser.parse("define roll = [{'roll:1}, {'roll:2}]; roll + roll");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'roll", INTEGER_TYPE)));
+        final List<Vector.Dimension<?>> coordinate1 = List.of(
+                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 2))
+        );
+        final List<Vector.Dimension<?>> coordinate2 = List.of(
+                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 3))
+        );
+        final List<Vector.Dimension<?>> coordinate3 = List.of(
+                new Vector.Dimension<>("'roll", new Expression.Constant<>(INTEGER_TYPE, 4))
+        );
+        final Vector vector1 = new Vector(type, coordinate1);
+        final Vector vector2 = new Vector(type, coordinate2);
+        final Vector vector3 = new Vector(type, coordinate3);
+        assertThat(result).hasEntrySatisfying(vector1, prob -> assertThat(prob).isCloseTo(0.25, offset))
+                          .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.5, offset))
+                          .hasEntrySatisfying(vector2, prob -> assertThat(prob).isCloseTo(0.25, offset))
+                          .containsOnlyKeys(vector1, vector2, vector3);
+    }
+
     @Test(expected = DiceTypeException.class)
     public void mismatchedDiceType() {
         parser.parse("define myTest = [1, 3, true]; myTest + 1");
