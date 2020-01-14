@@ -146,7 +146,7 @@ public abstract class Expression<T extends Comparable<T>> {
 
         @Override
         public String toString() {
-            return format("%s %s %s", left, operator, right);
+            return format("%s %s %s", left, operator.getSymbol(), right);
         }
     }
 }
