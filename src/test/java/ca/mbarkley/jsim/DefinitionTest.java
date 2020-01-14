@@ -123,6 +123,22 @@ public class DefinitionTest {
     }
 
     @Test
+    public void evaluateSumOfDefinedIntegers() {
+        final Evaluation eval = parser.parse("define myTest = 1; myTest + myTest");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Integer, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
+        final Offset<Double> offset = offset(0.0001);
+        assertThat(result).hasEntrySatisfying(2, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .containsOnlyKeys(2);
+    }
+
+    @Test
     public void evaluateCustomBooleanDiceDefinition() {
         final Evaluation eval = parser.parse("define myTest = [true, true, false]; myTest");
 
