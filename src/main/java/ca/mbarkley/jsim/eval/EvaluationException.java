@@ -2,6 +2,7 @@ package ca.mbarkley.jsim.eval;
 
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.Expression;
+import ca.mbarkley.jsim.model.Symbol;
 import ca.mbarkley.jsim.model.Type;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
@@ -44,7 +45,7 @@ public class EvaluationException extends RuntimeException {
     }
 
     public static class DuplicateDimensionDeclarationException extends EvaluationException {
-        public DuplicateDimensionDeclarationException(JSimParser.VectorLiteralContext ctx, String duplicateName) {
+        public DuplicateDimensionDeclarationException(JSimParser.VectorLiteralContext ctx, Symbol duplicateName) {
             super(format("Dimension [%s] declared twice in vector [%s]", duplicateName, ctx.getText()));
         }
     }

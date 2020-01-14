@@ -3,7 +3,10 @@ package ca.mbarkley.jsim.model;
 import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
@@ -11,15 +14,15 @@ import static java.util.stream.Collectors.toSet;
 public abstract class Types {
     public static final Type<Integer> INTEGER_TYPE = new Type.IntegerType();
     public static final Type<Boolean> BOOLEAN_TYPE = new Type.BooleanType();
-    public static final Type<String> SYMBOL_TYPE = new Type.SymbolType();
+    public static final Type<Symbol> SYMBOL_TYPE = new Type.SymbolType();
     public static final Type<Vector> EMPTY_VECTOR_TYPE = new VectorType(new TreeMap<>());
 
     private Types() {}
 
     public static VectorType mergeVectorTypes(Collection<VectorType> types) throws EvaluationException.UnmergableVectorTypeException {
-        final SortedMap<String, Type<?>> dimensionSuperset = new TreeMap<>();
+        final SortedMap<Symbol, Type<?>> dimensionSuperset = new TreeMap<>();
         for (var t : types) {
-            final SortedMap<String, Type<?>> dimensions = t.getDimensions();
+            final SortedMap<Symbol, Type<?>> dimensions = t.getDimensions();
             for (var dim : dimensions.entrySet()) {
                 dimensionSuperset.compute(dim.getKey(), (k, v) -> {
                     if (v == null || v.equals(dim.getValue())) {

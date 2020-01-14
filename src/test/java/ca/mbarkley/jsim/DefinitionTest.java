@@ -6,6 +6,7 @@ import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
 import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Constant;
+import ca.mbarkley.jsim.model.Symbol;
 import ca.mbarkley.jsim.model.Type;
 import ca.mbarkley.jsim.model.Vector;
 import org.assertj.core.data.Offset;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static ca.mbarkley.jsim.model.Symbol.fromText;
 import static ca.mbarkley.jsim.model.Types.INTEGER_TYPE;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -199,11 +201,14 @@ public class DefinitionTest {
                                                .stream()
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
-        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'one", INTEGER_TYPE, "'two", INTEGER_TYPE, "'three", INTEGER_TYPE)));
-        final SortedMap<String, Constant<?>> coordinate = new TreeMap<>(Map.of(
-                 "'one", new Constant<>(INTEGER_TYPE, 1),
-                "'two", new Constant<>(INTEGER_TYPE, 2),
-                "'three", new Constant<>(INTEGER_TYPE, 3)
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of(
+                fromText("'one"), INTEGER_TYPE,
+                fromText("'two"), INTEGER_TYPE,
+                fromText("'three"), INTEGER_TYPE)));
+        final SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>(Map.of(
+                 fromText("'one"), new Constant<>(INTEGER_TYPE, 1),
+                fromText("'two"), new Constant<>(INTEGER_TYPE, 2),
+                fromText("'three"), new Constant<>(INTEGER_TYPE, 3)
         ));
         final Vector vector = new Vector(type, coordinate);
         assertThat(result).hasEntrySatisfying(vector, prob -> assertThat(prob).isCloseTo(1.0, offset));
@@ -221,14 +226,16 @@ public class DefinitionTest {
                                                .stream()
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
-        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
-        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
-                 "'dmg", new Constant<>(INTEGER_TYPE, 1),
-                "'range", new Constant<>(INTEGER_TYPE, 2)
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of(
+                fromText("'dmg"), INTEGER_TYPE,
+                fromText("'range"), INTEGER_TYPE)));
+        final SortedMap<Symbol, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                 fromText("'dmg"), new Constant<>(INTEGER_TYPE, 1),
+                fromText("'range"), new Constant<>(INTEGER_TYPE, 2)
         ));
-        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
-                 "'dmg", new Constant<>(INTEGER_TYPE, 2),
-                "'range", new Constant<>(INTEGER_TYPE, 1)
+        final SortedMap<Symbol, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                 fromText("'dmg"), new Constant<>(INTEGER_TYPE, 2),
+                 fromText("'range"), new Constant<>(INTEGER_TYPE, 1)
         ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);
@@ -249,14 +256,16 @@ public class DefinitionTest {
                                                .stream()
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
-        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'dmg", INTEGER_TYPE, "'range", INTEGER_TYPE)));
-        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
-                 "'dmg", new Constant<>(INTEGER_TYPE, 1),
-                "'range", new Constant<>(INTEGER_TYPE, 0)
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of(
+                fromText("'dmg"), INTEGER_TYPE,
+                fromText("'range"), INTEGER_TYPE)));
+        final SortedMap<Symbol, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                fromText("'dmg"), new Constant<>(INTEGER_TYPE, 1),
+                fromText("'range"), new Constant<>(INTEGER_TYPE, 0)
         ));
-        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
-                "'dmg", new Constant<>(INTEGER_TYPE, 1),
-                "'range", new Constant<>(INTEGER_TYPE, 1)
+        final SortedMap<Symbol, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                fromText("'dmg"), new Constant<>(INTEGER_TYPE, 1),
+                fromText("'range"), new Constant<>(INTEGER_TYPE, 1)
         ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);
@@ -277,15 +286,15 @@ public class DefinitionTest {
                                                .stream()
                                                .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
         final Offset<Double> offset = offset(0.0001);
-        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of("'roll", INTEGER_TYPE)));
-        final SortedMap<String, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
-                "'roll", new Expression.Constant<>(INTEGER_TYPE, 2)
+        final Type.VectorType type = new Type.VectorType(new TreeMap<>(Map.of(fromText("'roll"), INTEGER_TYPE)));
+        final SortedMap<Symbol, Constant<?>> coordinate1 = new TreeMap<>(Map.of(
+                fromText("'roll"), new Expression.Constant<>(INTEGER_TYPE, 2)
         ));
-        final SortedMap<String, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
-                "'roll", new Expression.Constant<>(INTEGER_TYPE, 3)
+        final SortedMap<Symbol, Constant<?>> coordinate2 = new TreeMap<>(Map.of(
+                fromText("'roll"), new Expression.Constant<>(INTEGER_TYPE, 3)
         ));
-        final SortedMap<String, Constant<?>> coordinate3 = new TreeMap<>(Map.of(
-                "'roll", new Expression.Constant<>(INTEGER_TYPE, 4)
+        final SortedMap<Symbol, Constant<?>> coordinate3 = new TreeMap<>(Map.of(
+                fromText("'roll"), new Expression.Constant<>(INTEGER_TYPE, 4)
         ));
         final Vector vector1 = new Vector(type, coordinate1);
         final Vector vector2 = new Vector(type, coordinate2);

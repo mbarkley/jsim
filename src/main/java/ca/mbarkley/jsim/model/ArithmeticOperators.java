@@ -62,7 +62,7 @@ public abstract class ArithmeticOperators {
         @Override
         public Vector evaluate(Vector left, Vector right) {
             final VectorType mergedType = mergeVectorTypes(List.of(left.getType(), right.getType()));
-            final SortedMap<String, Constant<?>>  newCoordinates = new TreeMap<>();
+            final SortedMap<Symbol, Constant<?>>  newCoordinates = new TreeMap<>();
             mergedType.getDimensions()
                       .forEach((name, type) -> newCoordinates.put(name, applyDimensionOp(left, right, name, type)));
 
@@ -79,7 +79,7 @@ public abstract class ArithmeticOperators {
         }
 
         @SuppressWarnings("unchecked")
-        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Vector left, Vector right, String name, Type<T> outputType) {
+        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Vector left, Vector right, Symbol name, Type<T> outputType) {
             final Constant<T> leftValue = (Constant<T>) left.getCoordinate()
                                                             .getOrDefault(name, outputType.zeroAsConstant());
             final Constant<T> rightValue = (Constant<T>) right.getCoordinate()

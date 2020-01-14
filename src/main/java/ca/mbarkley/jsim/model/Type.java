@@ -48,7 +48,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class VectorType extends Type<Vector> {
-        SortedMap<String, Type<?>> dimensions;
+        SortedMap<Symbol, Type<?>> dimensions;
 
         @Override
         public Vector zero() {
@@ -113,7 +113,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
             return cmp.compare(v1, v2);
         }
 
-        private Object lookupDimensionValue(Vector o1, Map.Entry<String, Type<?>> dim) {
+        private Object lookupDimensionValue(Vector o1, Map.Entry<Symbol, Type<?>> dim) {
             return o1.getCoordinate()
                      .getOrDefault(dim.getKey(), dim.getValue().zeroAsConstant())
                      .getValue();
@@ -121,10 +121,10 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class SymbolType extends SimpleType<String> {
+    static class SymbolType extends SimpleType<Symbol> {
 
         @Override
-        public String zero() {
+        public Symbol zero() {
             throw new UnsupportedOperationException();
         }
 
@@ -134,7 +134,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
         }
 
         @Override
-        public int compare(String o1, String o2) {
+        public int compare(Symbol o1, Symbol o2) {
             return o1.compareTo(o2);
         }
     }

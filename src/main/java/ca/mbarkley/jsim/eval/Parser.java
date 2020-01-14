@@ -133,15 +133,15 @@ public class Parser {
             } else {
                 final Type<?> type = Types.findCommonType(types);
                 if (type instanceof VectorType) {
-                    final SortedMap<String, Type<?>> dimensions = ((VectorType) type).getDimensions();
+                    final SortedMap<Symbol, Type<?>> dimensions = ((VectorType) type).getDimensions();
                     final List<Constant<?>> newValues =
                             values.stream()
                                   .map(c -> {
                                       final Vector v = (Vector) c.getValue();
-                                      final SortedMap<String, Constant<?>> coordinate = v.getCoordinate();
-                                      final SortedMap<String, Constant<?>> newCoordinate = new TreeMap<>(coordinate);
+                                      final SortedMap<Symbol, Constant<?>> coordinate = v.getCoordinate();
+                                      final SortedMap<Symbol, Constant<?>> newCoordinate = new TreeMap<>(coordinate);
                                       for (var entry : dimensions.entrySet()) {
-                                          final String name = entry.getKey();
+                                          final Symbol name = entry.getKey();
                                           final Type<?> dimType = entry.getValue();
                                           if (!coordinate.containsKey(name)) {
                                               final Comparable<?> zero = dimType.zero();
@@ -183,7 +183,7 @@ public class Parser {
             } else if (ctx.FALSE() != null) {
                 return BooleanExpression.FALSE;
             } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, ctx.SYMBOL().getText());
+                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.SYMBOL().getText()));
             } else if (ctx.vectorLiteral() != null) {
                 return expressionVisitor.visitVectorLiteral(evalCtx, ctx.vectorLiteral());
             } else {
@@ -208,7 +208,7 @@ public class Parser {
                 final String identifier = ctx.IDENTIFIER().getText();
                 return lookupIdentifier(evalCtx, identifier);
             } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, ctx.SYMBOL().getText());
+                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.SYMBOL().getText()));
             } else {
                 throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx.getText()));
             }
@@ -229,8 +229,8 @@ public class Parser {
             } else if (ctx.booleanTerm() != null) {
                 return visitBooleanTerm(evalCtx, ctx.booleanTerm());
             } else if (ctx.symbolTerm().size() == 2) {
-                final Expression<String> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
-                final Expression<String> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
+                final Expression<Symbol> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
+                final Expression<Symbol> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
 
                 return new ComparisonExpression<>(left, BinaryOperator.equality(), right);
             } else if (ctx.booleanExpression().size() == 2) {
@@ -263,9 +263,9 @@ public class Parser {
             }
         }
 
-        private Expression<String> visitSymbolTerm(Context evalCtx, JSimParser.SymbolTermContext ctx) {
+        private Expression<Symbol> visitSymbolTerm(Context evalCtx, JSimParser.SymbolTermContext ctx) {
             if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, ctx.getText());
+                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.getText()));
             } else if (ctx.IDENTIFIER() != null) {
                 final Expression<?> expression = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
                 return Types.SYMBOL_TYPE.asType(expression);
@@ -350,10 +350,10 @@ public class Parser {
         }
 
         private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
-            SortedMap<String, Type<?>> typesByDimName = new TreeMap<>();
-            SortedMap<String, Constant<?>> coordinate = new TreeMap<>();
+            SortedMap<Symbol, Type<?>> typesByDimName = new TreeMap<>();
+            SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>();
             for (var dim : ctx.dimension()) {
-                final String name = dim.SYMBOL().getText();
+                final Symbol name = Symbol.fromText(dim.SYMBOL().getText());
                 final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
                 typesByDimName.compute(name, (k, v) -> {
                     if (v == null) {

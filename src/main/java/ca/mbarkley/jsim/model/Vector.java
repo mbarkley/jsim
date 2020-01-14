@@ -11,7 +11,7 @@ import static java.lang.String.format;
 @Value
 public class Vector implements Comparable<Vector> {
     Type.VectorType type;
-    SortedMap<String, Constant<?>> coordinate;
+    SortedMap<Symbol, Constant<?>> coordinate;
 
     @Override
     public int compareTo(Vector o) {
