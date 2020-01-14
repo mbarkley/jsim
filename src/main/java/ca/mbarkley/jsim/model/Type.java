@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -15,6 +16,8 @@ import static java.lang.String.format;
 public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     public abstract T zero();
     public abstract String getName();
+    public abstract Expression<T> asType(Expression<?> expression);
+    public abstract boolean isAssignableFrom(Type<?> type);
 
     public Constant<T> zeroAsConstant() {
         return new Constant<>(this, zero());
@@ -23,6 +26,23 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     @Override
     public String toString() {
         return getName();
+    }
+
+    public abstract static class SimpleType<T extends Comparable<T>> extends Type<T> {
+        public Expression<T> asType(Expression<?> expression) throws InvalidTypeException {
+            final Type<?> type = expression.getType();
+            if (this.equals(type)) {
+                //noinspection unchecked
+                return (Expression<T>) expression;
+            } else {
+                throw new InvalidTypeException(this, type);
+            }
+        }
+
+        @Override
+        public boolean isAssignableFrom(Type<?> type) {
+            return this.equals(type);
+        }
     }
 
     @Value
@@ -38,6 +58,28 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
         @Override
         public String getName() {
             return toString();
+        }
+
+        @Override
+        public Expression<Vector> asType(Expression<?> expression) {
+            if (this.isAssignableFrom(expression.getType())) {
+                //noinspection unchecked
+                return (Expression<Vector>) expression;
+            } else {
+                throw new InvalidTypeException(this, expression.getType());
+            }
+        }
+
+        @Override
+        public boolean isAssignableFrom(Type<?> type) {
+            return type instanceof VectorType
+                    && ((VectorType) type).getDimensions()
+                                          .entrySet()
+                                          .stream()
+                                          .allMatch(e -> {
+                                              final Type<?> requiredDimType = dimensions.get(e.getKey());
+                                              return requiredDimType != null && requiredDimType.isAssignableFrom(e.getValue());
+                                          });
         }
 
         @Override
@@ -79,7 +121,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class SymbolType extends Type<String> {
+    static class SymbolType extends SimpleType<String> {
 
         @Override
         public String zero() {
@@ -98,7 +140,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class IntegerType extends Type<Integer> {
+    static class IntegerType extends SimpleType<Integer> {
         @Override
         public Integer zero() {
             return 0;
@@ -116,7 +158,7 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class BooleanType extends Type<Boolean> {
+    static class BooleanType extends SimpleType<Boolean> {
         @Override
         public Boolean zero() {
             return false;

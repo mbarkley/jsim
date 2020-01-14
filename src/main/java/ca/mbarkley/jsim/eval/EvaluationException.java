@@ -54,4 +54,20 @@ public class EvaluationException extends RuntimeException {
             super(message);
         }
     }
+
+    public static class InvalidTypeException extends EvaluationException {
+        public InvalidTypeException(Type<?> expected, Type<?> observed) {
+            super(format("Expected type [%s] but observed [%s]", expected.getName(), observed.getName()));
+        }
+
+        public InvalidTypeException(String message) {
+            super(message);
+        }
+    }
+
+    public static class UnknownOperatorException extends EvaluationException {
+        public UnknownOperatorException(Type<?> left, String symbol, Type<?> right) {
+            super(format("Unknown operator [%s] for types [%s] and [%s]", symbol, left.getName(), right.getName()));
+        }
+    }
 }

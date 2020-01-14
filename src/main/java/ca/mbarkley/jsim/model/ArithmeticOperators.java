@@ -1,6 +1,7 @@
 package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.eval.EvaluationException;
+import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
@@ -15,34 +16,40 @@ import static java.lang.String.format;
 public abstract class ArithmeticOperators {
     private ArithmeticOperators() {}
 
-    public static final BinaryOperator<Integer, Integer> intAddition = BinaryOperator.create("+", Integer::sum);
-    public static final BinaryOperator<Integer, Integer> intSubtraction = BinaryOperator.create("-", (l, r) -> l-r);
-    public static final BinaryOperator<Integer, Integer> multiplication = BinaryOperator.create("*", (l, r) -> l*r);
-    public static final BinaryOperator<Integer, Integer> division = BinaryOperator.create("/", (l, r) -> l/r);
+    public static final BinaryOperator<Integer, Integer> intAddition = BinaryOperator.create(Types.INTEGER_TYPE, "+", Integer::sum);
+    public static final BinaryOperator<Integer, Integer> intSubtraction = BinaryOperator.create(Types.INTEGER_TYPE, "-", (l, r) -> l-r);
+    public static final BinaryOperator<Integer, Integer> multiplication = BinaryOperator.create(Types.INTEGER_TYPE,"*", (l, r) -> l*r);
+    public static final BinaryOperator<Integer, Integer> division = BinaryOperator.create(Types.INTEGER_TYPE, "/", (l, r) -> l/r);
 
     @SuppressWarnings("unchecked")
-    public static <V extends Comparable<V>, T extends Type<V>> Optional<? extends BinaryOperator<V, V>> lookupOp(T type, String symbol) {
-        if (type instanceof VectorType) {
-            return (Optional) lookupVectorOp(symbol);
-        } else if (type instanceof Type.IntegerType) {
-            return (Optional) lookupIntegerOp(symbol);
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    public static Optional<BinaryOperator<Integer, Integer>> lookupIntegerOp(String symbol) {
-        return HasSymbol.lookup(symbol, List.of(intAddition, intSubtraction, multiplication, division));
-    }
-
-    public static Optional<BinaryOperator<Vector, Vector>> lookupVectorOp(String symbol) {
+    public static <T extends Comparable<T>> Optional<? extends BinaryOperator<T, T>> lookupBinaryOp(Type<?> left, Type<?> right, String symbol) {
         switch (symbol) {
+            case "*":
+                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
+                    return (Optional) Optional.of(multiplication);
+                }
+                break;
+            case "/":
+                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
+                    return (Optional) Optional.of(division);
+                }
+                break;
             case "+":
+                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
+                    return (Optional) Optional.of(intAddition);
+                } else if (left.isAssignableFrom(Types.EMPTY_VECTOR_TYPE) && right.isAssignableFrom(Types.EMPTY_VECTOR_TYPE)) {
+                    return (Optional) Optional.of(new VectorBinaryOperation(symbol));
+                }
+                break;
             case "-":
-                return Optional.of(new VectorBinaryOperation(symbol));
-            default:
-                return Optional.empty();
+                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
+                    return (Optional) Optional.of(intSubtraction);
+                } else if (left.isAssignableFrom(Types.EMPTY_VECTOR_TYPE) && right.isAssignableFrom(Types.EMPTY_VECTOR_TYPE)) {
+                    return (Optional) Optional.of(new VectorBinaryOperation(symbol));
+                }
         }
+
+        return Optional.empty();
     }
 
     private static class VectorBinaryOperation implements BinaryOperator<Vector, Vector> {
@@ -57,33 +64,36 @@ public abstract class ArithmeticOperators {
             final VectorType mergedType = mergeVectorTypes(List.of(left.getType(), right.getType()));
             final SortedMap<String, Constant<?>>  newCoordinates = new TreeMap<>();
             mergedType.getDimensions()
-                      .entrySet()
-                      .forEach(e -> {
-                          final String name = e.getKey();
-                          final Type<?> type = e.getValue();
-
-                          newCoordinates.put(name, applyDimensionOp(left, right, name, type));
-                      });
+                      .forEach((name, type) -> newCoordinates.put(name, applyDimensionOp(left, right, name, type)));
 
             return new Vector(mergedType, newCoordinates);
         }
 
-        @SuppressWarnings("unchecked")
-        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Vector left, Vector right, String name, Type<T> type) {
-            final Constant<T> leftValue = (Constant<T>) left.getCoordinate()
-                                                            .getOrDefault(name, type.zeroAsConstant());
-            final Constant<T> rightValue = (Constant<T>) right.getCoordinate()
-                                                              .getOrDefault(name, type.zeroAsConstant());
-
-            return applyDimensionOp(type, leftValue, rightValue);
+        @Override
+        public Type<Vector> getOutputType(Type<Vector> left, Type<Vector> right) {
+            if (left instanceof VectorType && right instanceof VectorType) {
+                return mergeVectorTypes(List.of((VectorType) left, (VectorType) right));
+            } else {
+                throw new InvalidTypeException(format("Expected left and right to be Vector types, but were [%s] and [%s]", left.getName(), right.getName()));
+            }
         }
 
-        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Type<T> type, Constant<T> leftValue, Constant<T> rightValue) {
+        @SuppressWarnings("unchecked")
+        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Vector left, Vector right, String name, Type<T> outputType) {
+            final Constant<T> leftValue = (Constant<T>) left.getCoordinate()
+                                                            .getOrDefault(name, outputType.zeroAsConstant());
+            final Constant<T> rightValue = (Constant<T>) right.getCoordinate()
+                                                              .getOrDefault(name, outputType.zeroAsConstant());
+
+            return applyDimensionOp(leftValue.getType(), rightValue.getType(), outputType, leftValue, rightValue);
+        }
+
+        private <T extends Comparable<T>> Constant<T> applyDimensionOp(Type<T> left, Type<T> right, Type<T> outputType, Constant<T> leftValue, Constant<T> rightValue) {
             final BinaryOperator<T, T> op =
-                    lookupOp(type, symbol).orElseThrow(() -> new EvaluationException(format("Operator [%s] is undefined for type [%s]", symbol, type)));
+                    (BinaryOperator<T, T>) lookupBinaryOp(left, right, symbol).orElseThrow(() -> new EvaluationException(format("Operator [%s] is undefined for types [%s, %s]", symbol, left, right)));
             final T newValue = op.evaluate(leftValue.getValue(), rightValue.getValue());
 
-            return new Constant<T>(type, newValue);
+            return new Constant<T>(outputType, newValue);
         }
 
         @Override

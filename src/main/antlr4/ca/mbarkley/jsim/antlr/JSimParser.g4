@@ -20,13 +20,8 @@ diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL | vectorLiteral;
 
 expression : IDENTIFIER |
              SYMBOL |
-             vectorExpression |
              arithmeticExpression |
              booleanExpression;
-
-vectorExpression : LB vectorExpression RB |
-                   vectorExpression (PLUS|MINUS) vectorExpression |
-                   vectorTerm;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
@@ -46,13 +41,11 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
                        arithmeticTerm;
 
-arithmeticTerm : NUMBER | ROLL | IDENTIFIER;
+arithmeticTerm : NUMBER | ROLL | IDENTIFIER | vectorLiteral;
 
 booleanTerm : TRUE | FALSE | IDENTIFIER;
 
 symbolTerm : SYMBOL | IDENTIFIER;
-
-vectorTerm : IDENTIFIER | vectorLiteral;
 
 vectorLiteral : LCB dimension (COMMA dimension)* RCB;
 
