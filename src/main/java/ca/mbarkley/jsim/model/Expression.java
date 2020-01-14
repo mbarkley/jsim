@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
+import static ca.mbarkley.jsim.util.FormatUtils.formatAsPercentage;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -91,8 +92,7 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public String toString() {
             final String[] valueString = values.stream()
-                                               .map(Event::getValue)
-                                               .map(Object::toString)
+                                               .map(event -> format("%s (%s)", event.getValue(), formatAsPercentage(event.getProbability())))
                                                .toArray(String[]::new);
             return format("[%s]", String.join(", ", valueString));
         }

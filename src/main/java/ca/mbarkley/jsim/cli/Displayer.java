@@ -1,12 +1,14 @@
 package ca.mbarkley.jsim.cli;
 
 import ca.mbarkley.jsim.prob.Event;
+import ca.mbarkley.jsim.util.FormatUtils;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.Math.max;
 import static java.lang.String.format;
 import static java.util.Comparator.*;
 import static java.util.stream.Collectors.toList;
@@ -51,8 +53,8 @@ public class Displayer {
             final StringBuilder sb = new StringBuilder();
 
             // Header
-            final int barLength = (desiredWidth - title.length() - 2) / 2;
-            final int remainderAdjustment = (desiredWidth - title.length() - 2) % 2;
+            final int barLength = max((desiredWidth - title.length() - 2) / 2, 0);
+            final int remainderAdjustment = max((desiredWidth - title.length() - 2) % 2, 0);
             sb.append("-".repeat(barLength))
               .append(" ")
               .append(title)
@@ -68,9 +70,9 @@ public class Displayer {
                 sb.append(value)
                   .append(" ".repeat(totalLeftPad - value.length()))
                   .append('|')
-                  .append("*".repeat(Math.max(0, charCount)))
+                  .append("*".repeat(max(0, charCount)))
                   .append(" ".repeat(totalGraphSectionWidth - charCount))
-                  .append(format("%.2f%%", 100.0 * event.getProbability()))
+                  .append(FormatUtils.formatAsPercentage(probability))
                   .append('\n');
             }
 
