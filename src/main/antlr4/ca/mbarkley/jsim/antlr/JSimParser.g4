@@ -18,18 +18,17 @@ diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 
 diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL | vectorLiteral;
 
-expression : IDENTIFIER |
-             SYMBOL |
-             arithmeticExpression |
-             booleanExpression;
+expression : arithmeticExpression |
+             booleanExpression |
+             reference;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
                     booleanExpression OR booleanExpression |
                     booleanExpression EQ booleanExpression |
-                    symbolTerm EQ symbolTerm |
                     arithmeticComparison |
-                    booleanTerm;
+                    booleanLiteral |
+                    reference;
 
 arithmeticComparison : arithmeticExpression LT arithmeticExpression |
                        arithmeticExpression GT arithmeticExpression |
@@ -39,13 +38,14 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression DIVIDE arithmeticExpression |
                        arithmeticExpression TIMES arithmeticExpression |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
-                       arithmeticTerm;
+                       arithmeticLiteral |
+                       reference;
 
-arithmeticTerm : NUMBER | ROLL | IDENTIFIER | vectorLiteral;
+reference: IDENTIFIER;
 
-booleanTerm : TRUE | FALSE | IDENTIFIER;
+arithmeticLiteral : NUMBER | ROLL | vectorLiteral | SYMBOL;
 
-symbolTerm : SYMBOL | IDENTIFIER;
+booleanLiteral : TRUE | FALSE;
 
 vectorLiteral : LCB dimension (COMMA dimension)* RCB;
 

@@ -17,6 +17,7 @@ import ca.mbarkley.jsim.prob.Event;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -204,11 +205,6 @@ public class Parser {
                 return booleanExpressionVisitor.visitBooleanExpression(evalCtx, ctx.booleanExpression());
             } else if (ctx.arithmeticExpression() != null) {
                 return arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression());
-            } else if (ctx.IDENTIFIER() != null) {
-                final String identifier = ctx.IDENTIFIER().getText();
-                return lookupIdentifier(evalCtx, identifier);
-            } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.SYMBOL().getText()));
             } else {
                 throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx.getText()));
             }
@@ -226,13 +222,8 @@ public class Parser {
         public Expression<Boolean> visitBooleanExpression(Context evalCtx, JSimParser.BooleanExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
-            } else if (ctx.booleanTerm() != null) {
-                return visitBooleanTerm(evalCtx, ctx.booleanTerm());
-            } else if (ctx.symbolTerm().size() == 2) {
-                final Expression<Symbol> left = visitSymbolTerm(evalCtx, ctx.symbolTerm(0));
-                final Expression<Symbol> right = visitSymbolTerm(evalCtx, ctx.symbolTerm(1));
-
-                return new ComparisonExpression<>(left, BinaryOperator.equality(), right);
+            } else if (ctx.booleanLiteral() != null) {
+                return visitBooleanLiteral(evalCtx, ctx.booleanLiteral());
             } else if (ctx.booleanExpression().size() == 2) {
                 final String booleanOperatorText = ctx.getChild(1).getText();
                 final BinaryOperator<Boolean, Boolean> operator = BooleanOperators.lookup(booleanOperatorText)
@@ -244,8 +235,25 @@ public class Parser {
                 return new BinaryOpExpression<>(Types.BOOLEAN_TYPE, left, operator, right);
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
-            } else {
+            } else if (ctx.arithmeticComparison() != null) {
                 return visitArithmeticComparison(evalCtx, ctx.arithmeticComparison());
+            } else if (ctx.reference() != null) {
+                return visitReference(evalCtx, ctx.reference());
+            } else {
+                throw new UnsupportedOperationException(format("Unknown part [%s]", ctx.getText()));
+            }
+        }
+
+        private Expression<Boolean> visitReference(Context evalCtx, JSimParser.ReferenceContext ctx) {
+            if (ctx.IDENTIFIER() != null) {
+                final Expression<?> expression = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+                if (Types.BOOLEAN_TYPE.isAssignableFrom(expression.getType())) {
+                    return (Expression<Boolean>) expression;
+                } else {
+                    throw new EvaluationException.InvalidTypeException(Types.BOOLEAN_TYPE, expression.getType());
+                }
+            } else {
+                throw new UnsupportedOperationException(format("Unknown expression kind [%s]", ctx.getText()));
             }
         }
 
@@ -263,26 +271,11 @@ public class Parser {
             }
         }
 
-        private Expression<Symbol> visitSymbolTerm(Context evalCtx, JSimParser.SymbolTermContext ctx) {
-            if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.getText()));
-            } else if (ctx.IDENTIFIER() != null) {
-                final Expression<?> expression = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
-                return Types.SYMBOL_TYPE.asType(expression);
-            } else {
-                throw new IllegalStateException(ctx.getText());
-            }
-        }
-
-        public Expression<Boolean> visitBooleanTerm(Context evalCtx, JSimParser.BooleanTermContext ctx) {
+        public Expression<Boolean> visitBooleanLiteral(Context evalCtx, JSimParser.BooleanLiteralContext ctx) {
             if (ctx.TRUE() != null) {
                 return BooleanExpression.TRUE;
             } else if (ctx.FALSE() != null) {
                 return BooleanExpression.FALSE;
-            } else if (ctx.IDENTIFIER() != null) {
-                final String identifier = ctx.IDENTIFIER().getText();
-                final Expression<?> expression = lookupIdentifier(evalCtx, identifier);
-                return Types.BOOLEAN_TYPE.asType(expression);
             } else {
                 throw new IllegalStateException();
             }
@@ -297,14 +290,24 @@ public class Parser {
                 return visitBinaryExpression(evalCtx, ctx);
             } else if (ctx.arithmeticExpression().size() == 1) {
                 return new Bracketed<>(visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0)));
-            } else if (ctx.arithmeticTerm() != null) {
-                return visitArithmeticTerm(evalCtx, ctx.arithmeticTerm());
+            } else if (ctx.arithmeticLiteral() != null) {
+                return visitArithmeticLiteral(evalCtx, ctx.arithmeticLiteral());
+            } else if (ctx.reference() != null) {
+                return visitReference(evalCtx, ctx.reference());
             } else {
-                throw new IllegalStateException();
+                throw unsupportedExpression(ctx);
             }
         }
 
-        public Expression<?> visitArithmeticTerm(Context evalCtx, JSimParser.ArithmeticTermContext ctx) {
+        private Expression<?> visitReference(Context evalCtx, JSimParser.ReferenceContext ctx) {
+            if (ctx.IDENTIFIER() != null) {
+                return lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+            } else {
+                throw unsupportedExpression(ctx);
+            }
+        }
+
+        public Expression<?> visitArithmeticLiteral(Context evalCtx, JSimParser.ArithmeticLiteralContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.NUMBER() != null) {
@@ -329,11 +332,10 @@ public class Parser {
                 }
 
                 throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
-            } else if (ctx.IDENTIFIER() != null) {
-                final String identifier = ctx.IDENTIFIER().getText();
-                return lookupIdentifier(evalCtx, identifier);
             } else if (ctx.vectorLiteral() != null) {
                 return visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+            } else if (ctx.SYMBOL() != null) {
+                return symbol(ctx.SYMBOL());
             } else {
                 throw new IllegalStateException(ctx.toString());
             }
@@ -385,6 +387,14 @@ public class Parser {
                 throw new IllegalStateException(ctx.getText());
             }
         }
+    }
+
+    private static UnsupportedOperationException unsupportedExpression(RuleContext ctx) {
+        return new UnsupportedOperationException(format("Unknown expression kind [%s]", ctx.getText()));
+    }
+
+    private static Expression<Symbol> symbol(TerminalNode symbol) {
+        return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(symbol.getText()));
     }
 
     static Expression<?> lookupIdentifier(Context evalCtx, String identifier) {
