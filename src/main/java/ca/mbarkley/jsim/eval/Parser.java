@@ -178,7 +178,7 @@ public class Parser {
 
         private Constant<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
             if (ctx.NUMBER() != null) {
-                return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(ctx.NUMBER().getText()));
+                return number(ctx.NUMBER());
             } else if (ctx.TRUE() != null) {
                 return BooleanExpression.TRUE;
             } else if (ctx.FALSE() != null) {
@@ -294,9 +294,32 @@ public class Parser {
                 return visitArithmeticLiteral(evalCtx, ctx.arithmeticLiteral());
             } else if (ctx.reference() != null) {
                 return visitReference(evalCtx, ctx.reference());
+            } else if (ctx.multiplicativeTerm() != null) {
+                return visitMultiplicativeTerm(evalCtx, ctx.multiplicativeTerm());
             } else {
                 throw unsupportedExpression(ctx);
             }
+        }
+
+        private Expression<?> visitMultiplicativeTerm(Context evalCtx, JSimParser.MultiplicativeTermContext ctx) {
+            final Constant<Integer> number = number(ctx.NUMBER());
+            final Expression<Vector> expression;
+            if (ctx.reference() != null) {
+                final Expression<?> refExpression = visitReference(evalCtx, ctx.reference());
+                if (Types.EMPTY_VECTOR_TYPE.isAssignableFrom(refExpression.getType())) {
+                    expression = (Expression<Vector>) refExpression;
+                } else if (Types.SYMBOL_TYPE.isAssignableFrom(refExpression.getType())) {
+                    expression = symbolToVector((Expression<Symbol>) refExpression);
+                } else {
+                    throw unsupportedExpression(ctx.reference());
+                }
+            } else if (ctx.SYMBOL() != null) {
+                expression = symbolToVector(symbol(ctx.SYMBOL()));
+            } else {
+                throw unsupportedExpression(ctx);
+            }
+
+            return new MultiplicativeExpression(number.getValue(), expression);
         }
 
         private Expression<?> visitReference(Context evalCtx, JSimParser.ReferenceContext ctx) {
@@ -311,7 +334,7 @@ public class Parser {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.NUMBER() != null) {
-                return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(ctx.NUMBER().getText()));
+                return number(ctx.NUMBER());
             } else if (ctx.ROLL() != null) {
                 final Matcher matcher = ROLL.matcher(ctx.ROLL().getText());
                 if (matcher.matches()) {
@@ -387,6 +410,26 @@ public class Parser {
                 throw new IllegalStateException(ctx.getText());
             }
         }
+    }
+
+    private static Expression<Vector> symbolToVector(Expression<Symbol> refExpression) {
+        Expression<Vector> expression;
+        final List<Event<Vector>> vectors = refExpression.events()
+                                                         .map(symbolEvent -> new Event<>(new Vector(new VectorType(new TreeMap<>(Map.of(symbolEvent.getValue(), Types.INTEGER_TYPE))),
+                                                                                                    new TreeMap<>(Map.of(symbolEvent.getValue(), new Constant<>(Types.INTEGER_TYPE, 1)))),
+                                                                                         symbolEvent.getProbability()))
+                                                         .collect(toList());
+        final VectorType type = vectors.stream()
+                                       .map(ev -> ev.getValue().getType())
+                                       .reduce((v1, v2) -> Types.mergeVectorTypes(List.of(v1, v2)))
+                                       .orElse(Types.EMPTY_VECTOR_TYPE);
+
+        expression = new EventList<>(type, vectors);
+        return expression;
+    }
+
+    private static Constant<Integer> number(TerminalNode number) {
+        return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(number.getText()));
     }
 
     private static UnsupportedOperationException unsupportedExpression(RuleContext ctx) {

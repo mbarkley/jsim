@@ -314,25 +314,6 @@ public class ParserTest {
     }
 
     @Test
-    public void invalidToken() {
-        final String expression = "2d6 + 1bc";
-
-        try {
-            final List<Expression<?>> result = parser.parse(expression).getExpressions();
-            fail(format("Parsed a value: %s", result));
-        } catch (RecognitionException re) {
-            assertThat(re.getOffendingToken()).extracting(Token::getLine)
-                                              .isEqualTo(1);
-            assertThat(re.getOffendingToken()).extracting(Token::getCharPositionInLine)
-                                              .isEqualTo(7);
-            assertThat(re.getOffendingToken()).extracting(Token::getStartIndex)
-                                              .isEqualTo(7);
-            assertThat(re.getOffendingToken()).extracting(Token::getStopIndex)
-                                              .isEqualTo(8);
-        }
-    }
-
-    @Test
     public void wrongToken() {
         final String expression = "2d6 d8";
 

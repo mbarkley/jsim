@@ -2,11 +2,9 @@ package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.Value;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;

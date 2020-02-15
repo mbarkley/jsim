@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static ca.mbarkley.jsim.model.ArithmeticOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
 import static ca.mbarkley.jsim.util.FormatUtils.formatAsPercentage;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public abstract class Expression<T extends Comparable<T>> {
@@ -24,6 +26,33 @@ public abstract class Expression<T extends Comparable<T>> {
     }
 
     public abstract Type<T> getType();
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class MultiplicativeExpression extends Expression<Vector> {
+        Integer number;
+        Expression<Vector> subExpression;
+
+        @Override
+        public Stream<Event<Vector>> events() {
+            final List<Stream<Event<Vector>>> singleEventStreams = Stream.generate(() -> subExpression.events())
+                                                                         .limit(number)
+                                                                         .collect(toList());
+            final BinaryOperator<Vector, Vector> op = (BinaryOperator<Vector, Vector>) lookupBinaryOp(subExpression.getType(), subExpression.getType(), "+").get();
+
+            return productOfIndependent(singleEventStreams, op::evaluate);
+        }
+
+        @Override
+        public String toString() {
+            return format("(%s)", subExpression);
+        }
+
+        @Override
+        public Type<Vector> getType() {
+            return subExpression.getType();
+        }
+    }
 
     @Value
     @EqualsAndHashCode(callSuper = false)

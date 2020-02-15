@@ -15,7 +15,7 @@ public abstract class Types {
     public static final Type<Integer> INTEGER_TYPE = new Type.IntegerType();
     public static final Type<Boolean> BOOLEAN_TYPE = new Type.BooleanType();
     public static final Type<Symbol> SYMBOL_TYPE = new Type.SymbolType();
-    public static final Type<Vector> EMPTY_VECTOR_TYPE = new VectorType(new TreeMap<>());
+    public static final VectorType EMPTY_VECTOR_TYPE = new VectorType(new TreeMap<>());
 
     private Types() {}
 

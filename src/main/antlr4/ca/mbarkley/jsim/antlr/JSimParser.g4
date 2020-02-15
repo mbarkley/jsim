@@ -38,8 +38,11 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression DIVIDE arithmeticExpression |
                        arithmeticExpression TIMES arithmeticExpression |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
+                       multiplicativeTerm |
                        arithmeticLiteral |
                        reference;
+
+multiplicativeTerm: NUMBER (reference | SYMBOL);
 
 reference: IDENTIFIER;
 
