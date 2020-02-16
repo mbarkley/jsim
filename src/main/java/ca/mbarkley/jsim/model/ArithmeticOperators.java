@@ -37,7 +37,7 @@ public abstract class ArithmeticOperators {
             case "+":
                 if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
                     return (Optional) Optional.of(intAddition);
-                } else if (left.isAssignableFrom(Types.EMPTY_VECTOR_TYPE) && right.isAssignableFrom(Types.EMPTY_VECTOR_TYPE)) {
+                } else if (Types.EMPTY_VECTOR_TYPE.isAssignableTo(left) && Types.EMPTY_VECTOR_TYPE.isAssignableTo(right)) {
                     return (Optional) Optional.of(new VectorBinaryOperation(symbol));
                 }
                 break;
@@ -74,7 +74,7 @@ public abstract class ArithmeticOperators {
             if (left instanceof VectorType && right instanceof VectorType) {
                 return mergeVectorTypes(List.of((VectorType) left, (VectorType) right));
             } else {
-                throw new InvalidTypeException(format("Expected left and right to be Vector types, but were [%s] and [%s]", left.getName(), right.getName()));
+                throw new InvalidTypeException(format("Expected left and right to be Vector types, but were [%s] and [%s]", left.name(), right.name()));
             }
         }
 

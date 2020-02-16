@@ -3,51 +3,111 @@ package ca.mbarkley.jsim.model;
 import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.Value;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
-public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
-    public abstract T zero();
-    public abstract String getName();
-    public abstract Expression<T> asType(Expression<?> expression);
-    public abstract boolean isAssignableFrom(Type<?> type);
+public interface Type<T extends Comparable<T>> extends Comparator<T> {
+    interface TypeClass<T extends Comparable<T>> {
+        boolean isInstance(Type<?> type);
+        Optional<Type<T>> unify(List<Type<T>> types);
+    }
 
-    public Constant<T> zeroAsConstant() {
+    T zero();
+    String name();
+    boolean isAssignableFrom(Type<?> type);
+    TypeClass<T> typeClass();
+
+    default boolean isAssignableTo(Type<?> type) {
+        return type.isAssignableFrom(this);
+    }
+
+    default Expression<T> asType(Expression<?> expression) {
+        if (this.isAssignableFrom(expression.getType())) {
+            //noinspection unchecked
+            return (Expression<T>) expression;
+        } else {
+            throw new InvalidTypeException(this, expression.getType());
+        }
+    }
+
+    default Constant<T> zeroAsConstant() {
         return new Constant<>(this, zero());
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
-    public abstract static class SimpleType<T extends Comparable<T>> extends Type<T> {
-        public Expression<T> asType(Expression<?> expression) throws InvalidTypeException {
-            final Type<?> type = expression.getType();
-            if (this.equals(type)) {
-                //noinspection unchecked
-                return (Expression<T>) expression;
-            } else {
-                throw new InvalidTypeException(this, type);
-            }
+    abstract class SimpleType<T extends Comparable<T>> implements Type<T>, TypeClass<T> {
+        @Override
+        public boolean isAssignableFrom(Type<?> type) {
+            return equals(type);
         }
 
         @Override
-        public boolean isAssignableFrom(Type<?> type) {
-            return this.equals(type);
+        public boolean isInstance(Type<?> type) {
+            return equals(type);
+        }
+
+        @Override
+        public TypeClass<T> typeClass() {
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return name();
+        }
+
+        @Override
+        public Optional<Type<T>> unify(List<Type<T>> types) {
+            return types.stream()
+                        .findFirst();
+        }
+    }
+
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
+    class VectorTypeClass implements TypeClass<Vector> {
+        static final VectorTypeClass INSTANCE = new VectorTypeClass();
+        private VectorTypeClass() {}
+
+        @Override
+        public boolean isInstance(Type<?> type) {
+            return type instanceof VectorType;
+        }
+
+        @Override
+        public Optional<Type<Vector>> unify(List<Type<Vector>> types) {
+            final SortedMap<Symbol, Type<?>> dimensionSuperset = new TreeMap<>();
+            for (var t : types) {
+                final SortedMap<Symbol, Type<?>> dimensions = ((VectorType) t).getDimensions();
+                for (var dim : dimensions.entrySet()) {
+                    final Type<?> updated = dimensionSuperset.compute(dim.getKey(), (k, v) -> {
+                        if (v == null || v.equals(dim.getValue())) {
+                            return dim.getValue();
+                        } else {
+                            // Update null to indicate a conflict
+                            return null;
+                        }
+                    });
+
+                    // In case of conflicting component type, there is no way to unify
+                    if (updated == null) {
+                        return Optional.empty();
+                    }
+                }
+            }
+
+            return Optional.of(new VectorType(dimensionSuperset));
         }
     }
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class VectorType extends Type<Vector> {
+    class VectorType implements Type<Vector> {
         SortedMap<Symbol, Type<?>> dimensions;
 
         @Override
@@ -56,18 +116,13 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
         }
 
         @Override
-        public String getName() {
+        public String name() {
             return toString();
         }
 
         @Override
-        public Expression<Vector> asType(Expression<?> expression) {
-            if (this.isAssignableFrom(expression.getType())) {
-                //noinspection unchecked
-                return (Expression<Vector>) expression;
-            } else {
-                throw new InvalidTypeException(this, expression.getType());
-            }
+        public TypeClass<Vector> typeClass() {
+            return VectorTypeClass.INSTANCE;
         }
 
         @Override
@@ -121,7 +176,34 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class SymbolType extends SimpleType<Symbol> {
+    @ToString
+    class SymbolTypeClass implements TypeClass<Symbol> {
+        static final SymbolTypeClass INSTANCE = new SymbolTypeClass();
+        private SymbolTypeClass() {}
+
+        @Override
+        public boolean isInstance(Type<?> type) {
+            return type instanceof SymbolType;
+        }
+
+        @Override
+        public Optional<Type<Symbol>> unify(List<Type<Symbol>> types) {
+            final List<Symbol> symbols = types.stream()
+                                              .map(t -> ((SymbolType) t).getSymbol())
+                                              .collect(toList());
+
+            if (symbols.size() == 1) {
+                return Optional.of(types.get(0));
+            } else {
+                return Optional.empty();
+            }
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    class SymbolType implements Type<Symbol> {
+        private Symbol symbol;
 
         @Override
         public Symbol zero() {
@@ -129,25 +211,40 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
         }
 
         @Override
-        public String getName() {
-            return "Symbol";
+        public String name() {
+            return format("Symbol[%s]", symbol);
+        }
+
+        @Override
+        public TypeClass<Symbol> typeClass() {
+            return SymbolTypeClass.INSTANCE;
+        }
+
+        @Override
+        public boolean isAssignableFrom(Type<?> type) {
+            return type instanceof SymbolType && this.equals(type);
         }
 
         @Override
         public int compare(Symbol o1, Symbol o2) {
             return o1.compareTo(o2);
         }
+
+        @Override
+        public String toString() {
+            return name();
+        }
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class IntegerType extends SimpleType<Integer> {
+    class IntegerType extends SimpleType<Integer> {
         @Override
         public Integer zero() {
             return 0;
         }
 
         @Override
-        public String getName() {
+        public String name() {
             return Integer.class.getSimpleName();
         }
 
@@ -158,14 +255,14 @@ public abstract class Type<T extends Comparable<T>> implements Comparator<T> {
     }
 
     @EqualsAndHashCode(callSuper = false)
-    static class BooleanType extends SimpleType<Boolean> {
+    class BooleanType extends SimpleType<Boolean> {
         @Override
         public Boolean zero() {
             return false;
         }
 
         @Override
-        public String getName() {
+        public String name() {
             return Boolean.class.getSimpleName();
         }
 

@@ -4,11 +4,12 @@ import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Symbol;
 import ca.mbarkley.jsim.model.Type;
-import ca.mbarkley.jsim.model.Type.VectorType;
 
+import java.util.Collection;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 public class EvaluationException extends RuntimeException {
     public EvaluationException() {
@@ -33,8 +34,11 @@ public class EvaluationException extends RuntimeException {
     }
 
     public static class DiceTypeException extends EvaluationException {
-        public DiceTypeException(Set<String> typeNames) {
-            super(format("Dice sides in declaration must have common type, but these types were found [%s]", typeNames));
+        public DiceTypeException(Collection<? extends Type<?>> givenTypes, Set<? extends Type<?>> targetTypeClasses) {
+            super(format("Found target type classes %s for given types %s", targetTypeClasses,
+                         givenTypes.stream()
+                                   .map(Type::name)
+                                   .collect(joining(", ", "[", "]"))));
         }
     }
 
@@ -58,7 +62,7 @@ public class EvaluationException extends RuntimeException {
 
     public static class InvalidTypeException extends EvaluationException {
         public InvalidTypeException(Type<?> expected, Type<?> observed) {
-            super(format("Expected type [%s] but observed [%s]", expected.getName(), observed.getName()));
+            super(format("Expected type [%s] but observed [%s]", expected.name(), observed.name()));
         }
 
         public InvalidTypeException(String message) {
@@ -68,7 +72,7 @@ public class EvaluationException extends RuntimeException {
 
     public static class UnknownOperatorException extends EvaluationException {
         public UnknownOperatorException(Type<?> left, String symbol, Type<?> right) {
-            super(format("Unknown operator [%s] for types [%s] and [%s]", symbol, left.getName(), right.getName()));
+            super(format("Unknown operator [%s] for types [%s] and [%s]", symbol, left.name(), right.name()));
         }
     }
 }

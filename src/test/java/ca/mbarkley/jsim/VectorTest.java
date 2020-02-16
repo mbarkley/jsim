@@ -7,7 +7,6 @@ import ca.mbarkley.jsim.model.Expression.Constant;
 import org.junit.Test;
 
 import java.util.Map;
-import java.util.TreeMap;
 
 import static ca.mbarkley.jsim.model.Symbol.Mark.TICK;
 import static java.util.stream.Collectors.toMap;
@@ -46,5 +45,74 @@ public class VectorTest {
                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
         assertThat(result.keySet()).containsExactlyInAnyOrder(true);
         assertThat(result.values()).containsExactly(1.0);
+    }
+
+    @Test
+    public void addingSymbolsMakesVector() {
+        final Evaluation eval = parser.parse("'H + 'T");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        assertThat(result.keySet()).containsExactlyInAnyOrder(Vectors.of(Map.of(
+                new Symbol(TICK, "H"), Constants.of(1),
+                new Symbol(TICK, "T"), Constants.of(1)
+        )));
+        assertThat(result.values()).containsExactly(1.0);
+    }
+
+    @Test
+    public void addingSymbolAndVectorMakesVector() {
+        final Evaluation eval = parser.parse("'H + 1'T");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        assertThat(result.keySet()).containsExactlyInAnyOrder(Vectors.of(Map.of(
+                new Symbol(TICK, "H"), Constants.of(1),
+                new Symbol(TICK, "T"), Constants.of(1)
+        )));
+        assertThat(result.values()).containsExactly(1.0);
+    }
+
+    @Test
+    public void addingVectorAndSymbolMakesVector() {
+        final Evaluation eval = parser.parse("1'H + 'T");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Vector, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Vector) e.getKey(), e -> e.getValue().getProbability()));
+        assertThat(result.keySet()).containsExactlyInAnyOrder(Vectors.of(Map.of(
+                new Symbol(TICK, "H"), new Constant<>(Types.INTEGER_TYPE, 1),
+                new Symbol(TICK, "T"), new Constant<>(Types.INTEGER_TYPE, 1)
+        )));
+        assertThat(result.values()).containsExactly(1.0);
+    }
+
+    @Test
+    public void propertyAccessTest() {
+        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test['v]");
+
+        assertThat(eval.getExpressions()).hasSize(2);
+        final Map<Integer, Double> result = eval.getExpressions()
+                                                .get(1)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
+        assertThat(result.keySet()).containsExactlyInAnyOrder(1, 2);
+        assertThat(result.values()).allSatisfy(prob -> assertThat(prob).isCloseTo(0.5, offset(0.0001)));
     }
 }

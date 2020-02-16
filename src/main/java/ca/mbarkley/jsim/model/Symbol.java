@@ -25,6 +25,10 @@ public class Symbol implements Comparable<Symbol> {
         return symbol.compareTo(o.symbol);
     }
 
+    public Type<Symbol> getType() {
+        return new Type.SymbolType(this);
+    }
+
     public static Symbol fromText(String rawText) {
         final Mark mark = Arrays.stream(Mark.values())
                                 .filter(m -> rawText.startsWith(m.getSymbol()))

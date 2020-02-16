@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static ca.mbarkley.jsim.model.ArithmeticOperators.lookupBinaryOp;
+import static ca.mbarkley.jsim.model.Converter.converters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.*;
 
@@ -132,32 +133,18 @@ public class Parser {
             if (values.isEmpty()) {
                 throw new IllegalStateException("Cannot have empty dice declaration");
             } else {
-                final Type<?> type = Types.findCommonType(types);
-                if (type instanceof VectorType) {
-                    final SortedMap<Symbol, Type<?>> dimensions = ((VectorType) type).getDimensions();
-                    final List<Constant<?>> newValues =
-                            values.stream()
-                                  .map(c -> {
-                                      final Vector v = (Vector) c.getValue();
-                                      final SortedMap<Symbol, Constant<?>> coordinate = v.getCoordinate();
-                                      final SortedMap<Symbol, Constant<?>> newCoordinate = new TreeMap<>(coordinate);
-                                      for (var entry : dimensions.entrySet()) {
-                                          final Symbol name = entry.getKey();
-                                          final Type<?> dimType = entry.getValue();
-                                          if (!coordinate.containsKey(name)) {
-                                              final Comparable<?> zero = dimType.zero();
-                                              newCoordinate.put(name, new Constant(dimType, zero));
-                                          }
-                                      }
+                final Type<?> targetType = Types.findCommonType(types);
+                final List<Constant<?>> newValues =
+                        (List) values.stream()
+                                     .map(c -> {
+                                         final Converter converter = converters.get(new Converter.ConverterKey(c.getType().typeClass(), targetType.typeClass()));
+                                         final Comparable converted = converter.convert(c.getValue(), targetType);
 
-                                      return new Constant<>((VectorType) type, new Vector((VectorType) type, newCoordinate));
-                                  })
-                                  .collect(toList());
+                                         return new Constant(targetType, converted);
+                                     })
+                                     .collect(toList());
 
-                    return generateEventList(ctx, type, newValues);
-                } else {
-                    return generateEventList(ctx, type, values);
-                }
+                return generateEventList(ctx, targetType, newValues);
             }
         }
 
@@ -184,7 +171,8 @@ public class Parser {
             } else if (ctx.FALSE() != null) {
                 return BooleanExpression.FALSE;
             } else if (ctx.SYMBOL() != null) {
-                return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(ctx.SYMBOL().getText()));
+                final Symbol symbol = Symbol.fromText(ctx.SYMBOL().getText());
+                return new Constant<>(Types.symbolTypeOf(symbol), symbol);
             } else if (ctx.vectorLiteral() != null) {
                 return expressionVisitor.visitVectorLiteral(evalCtx, ctx.vectorLiteral());
             } else {
@@ -308,7 +296,7 @@ public class Parser {
                 final Expression<?> refExpression = visitReference(evalCtx, ctx.reference());
                 if (Types.EMPTY_VECTOR_TYPE.isAssignableFrom(refExpression.getType())) {
                     expression = (Expression<Vector>) refExpression;
-                } else if (Types.SYMBOL_TYPE.isAssignableFrom(refExpression.getType())) {
+                } else if (Types.SYMBOL_TYPE_CLASS.isInstance(refExpression.getType())) {
                     expression = symbolToVector((Expression<Symbol>) refExpression);
                 } else {
                     throw unsupportedExpression(ctx.reference());
@@ -437,7 +425,8 @@ public class Parser {
     }
 
     private static Expression<Symbol> symbol(TerminalNode symbol) {
-        return new Constant<>(Types.SYMBOL_TYPE, Symbol.fromText(symbol.getText()));
+        final Symbol s = Symbol.fromText(symbol.getText());
+        return new Constant<>(Types.symbolTypeOf(s), s);
     }
 
     static Expression<?> lookupIdentifier(Context evalCtx, String identifier) {
