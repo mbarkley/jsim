@@ -13,8 +13,8 @@ import java.util.TreeMap;
 import static ca.mbarkley.jsim.model.Types.mergeVectorTypes;
 import static java.lang.String.format;
 
-public abstract class ArithmeticOperators {
-    private ArithmeticOperators() {}
+public abstract class BinaryOperators {
+    private BinaryOperators() {}
 
     public static final BinaryOperator<Integer, Integer> intAddition = BinaryOperator.create(Types.INTEGER_TYPE, "+", Integer::sum);
     public static final BinaryOperator<Integer, Integer> intSubtraction = BinaryOperator.create(Types.INTEGER_TYPE, "-", (l, r) -> l-r);
@@ -47,6 +47,7 @@ public abstract class ArithmeticOperators {
                 } else if (left.isAssignableFrom(Types.EMPTY_VECTOR_TYPE) && right.isAssignableFrom(Types.EMPTY_VECTOR_TYPE)) {
                     return (Optional) Optional.of(new VectorBinaryOperation(symbol));
                 }
+                break;
         }
 
         return Optional.empty();

@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ca.mbarkley.jsim.model.ArithmeticOperators.lookupBinaryOp;
+import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.model.Converter.converters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.*;
@@ -194,7 +194,7 @@ public class Parser {
             } else if (ctx.arithmeticExpression() != null) {
                 return arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression());
             } else {
-                throw new IllegalArgumentException(format("Unknown expression kind [%s]", ctx.getText()));
+                throw unsupportedExpression(ctx);
             }
         }
 
@@ -220,7 +220,16 @@ public class Parser {
                 final Expression<Boolean> left = visitBooleanExpression(evalCtx, ctx.booleanExpression(0));
                 final Expression<Boolean> right = visitBooleanExpression(evalCtx, ctx.booleanExpression(1));
 
-                return new BinaryOpExpression<>(Types.BOOLEAN_TYPE, left, operator, right);
+                return new BinaryOpExpression<>(left, operator, right);
+            } else if (ctx.arithmeticExpression().size() == 2 && ctx.EQ() != null) {
+                final Expression<?> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
+                final Expression<?> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
+
+                if (left.getType().typeClass().equals(right.getType().typeClass())) {
+                    return new ComparisonExpression(left, BinaryOperator.strictEquality(), right);
+                } else {
+                    throw new EvaluationException.InvalidTypeException(format("Cannot test equality for types [%s] and [%s]", left.getType(), right.getType()));
+                }
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
             } else if (ctx.arithmeticComparison() != null) {
@@ -359,7 +368,7 @@ public class Parser {
             final BinaryOperator<?, ?> sign = lookupBinaryOp(left.getType(), right.getType(), operatorSymbol)
                     .orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
 
-            return new BinaryOpExpression(sign.unsafeGetOuptutType(left.getType(), right.getType()), left, sign, right);
+            return new BinaryOpExpression(left, sign, right);
         }
 
         private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {

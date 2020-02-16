@@ -21,10 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 public class ParserTest {
-    public static final BinaryOperator<Integer, Integer> PLUS = ArithmeticOperators.intAddition;
-    public static final BinaryOperator<Integer, Integer> MINUS = ArithmeticOperators.intSubtraction;
-    private static final BinaryOperator<Integer, Integer> TIMES = ArithmeticOperators.multiplication;
-    private static final BinaryOperator<Integer, Integer> DIVIDE = ArithmeticOperators.division;
+    public static final BinaryOperator<Integer, Integer> PLUS = BinaryOperators.intAddition;
+    public static final BinaryOperator<Integer, Integer> MINUS = BinaryOperators.intSubtraction;
+    private static final BinaryOperator<Integer, Integer> TIMES = BinaryOperators.multiplication;
+    private static final BinaryOperator<Integer, Integer> DIVIDE = BinaryOperators.division;
 
     Parser parser = new Parser();
 
@@ -88,7 +88,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(1, 6), PLUS, new Constant<>(Types.INTEGER_TYPE, 1)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(1, 6), PLUS, new Constant<>(Types.INTEGER_TYPE, 1)));
     }
 
     @Test
@@ -97,7 +97,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(1, 6), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(1, 6), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(3, 8), PLUS, new Constant<>(Types.INTEGER_TYPE, 1)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(3, 8), PLUS, new Constant<>(Types.INTEGER_TYPE, 1)));
     }
 
     @Test
@@ -115,7 +115,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(3, 8), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(3, 8), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)));
     }
 
     @Test
@@ -124,7 +124,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(3, 8), TIMES, new Constant<>(Types.INTEGER_TYPE, 2)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(3, 8), TIMES, new Constant<>(Types.INTEGER_TYPE, 2)));
     }
 
     @Test
@@ -133,7 +133,7 @@ public class ParserTest {
 
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
-        assertThat(result).containsExactly(new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(3, 8), DIVIDE, new Constant<>(Types.INTEGER_TYPE, 2)));
+        assertThat(result).containsExactly(new BinaryOpExpression<>(new HomogeneousDicePool(3, 8), DIVIDE, new Constant<>(Types.INTEGER_TYPE, 2)));
     }
 
     @Test
@@ -143,8 +143,7 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final BinaryOpExpression expected = new BinaryOpExpression<>(
-                Types.INTEGER_TYPE,
-                new BinaryOpExpression<>(Types.INTEGER_TYPE, new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
+                new BinaryOpExpression<>(new HomogeneousDicePool(3, 8), PLUS, new HomogeneousDicePool(2, 6)),
                 PLUS,
                 new Constant<>(Types.INTEGER_TYPE, 1));
         assertThat(result).containsExactly(expected);
@@ -182,7 +181,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.equality(), right);
+        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.strictEquality(), right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -193,8 +192,7 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final Expression<Integer> expected = new BinaryOpExpression<>(
-                Types.INTEGER_TYPE,
-                new BinaryOpExpression<>(Types.INTEGER_TYPE, new Constant<>(Types.INTEGER_TYPE, 2), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)),
+                new BinaryOpExpression<>(new Constant<>(Types.INTEGER_TYPE, 2), MINUS, new Constant<>(Types.INTEGER_TYPE, 1)),
                 PLUS,
                 new Constant<>(Types.INTEGER_TYPE, 1)
         );
@@ -208,11 +206,9 @@ public class ParserTest {
         final List<Expression<?>> result = parser.parse(expression).getExpressions();
 
         final Expression<Integer> expected = new BinaryOpExpression<>(
-                Types.INTEGER_TYPE,
                 new Constant<>(Types.INTEGER_TYPE, 2),
                 TIMES,
                 new Bracketed<>(new BinaryOpExpression<>(
-                        Types.INTEGER_TYPE,
                         new HomogeneousDicePool(2, 6),
                         PLUS,
                         new Constant<>(Types.INTEGER_TYPE, 1)

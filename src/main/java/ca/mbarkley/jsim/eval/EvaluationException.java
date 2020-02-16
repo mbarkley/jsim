@@ -33,8 +33,8 @@ public class EvaluationException extends RuntimeException {
         }
     }
 
-    public static class DiceTypeException extends EvaluationException {
-        public DiceTypeException(Collection<? extends Type<?>> givenTypes, Set<? extends Type<?>> targetTypeClasses) {
+    public static class TypeUnificationException extends EvaluationException {
+        public TypeUnificationException(Collection<? extends Type<?>> givenTypes, Set<? extends Type<?>> targetTypeClasses) {
             super(format("Found target type classes %s for given types %s", targetTypeClasses,
                          givenTypes.stream()
                                    .map(Type::name)

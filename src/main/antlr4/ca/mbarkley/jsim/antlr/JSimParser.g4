@@ -25,14 +25,14 @@ expression : arithmeticExpression |
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
                     booleanExpression OR booleanExpression |
+                    arithmeticExpression EQ arithmeticExpression |
                     booleanExpression EQ booleanExpression |
                     arithmeticComparison |
                     booleanLiteral |
                     reference;
 
 arithmeticComparison : arithmeticExpression LT arithmeticExpression |
-                       arithmeticExpression GT arithmeticExpression |
-                       arithmeticExpression EQ arithmeticExpression;
+                       arithmeticExpression GT arithmeticExpression;
 
 arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression DIVIDE arithmeticExpression |

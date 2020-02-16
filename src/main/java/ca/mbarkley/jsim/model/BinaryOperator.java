@@ -13,8 +13,8 @@ public interface BinaryOperator<I extends Comparable<I>, O extends Comparable<O>
         return getOutputType((Type) left, (Type) right);
     }
 
-    static <T extends Comparable<T>> BinaryOperator<T, Boolean> equality() {
-        return new Equality<>();
+    static <T extends Comparable<T>> BinaryOperator<T, Boolean> strictEquality() {
+        return new StrictEquality<>();
     }
 
     static <I extends Comparable<I>, O extends Comparable<O>> BinaryOperator<I, O> create(Type<O> type, String symbol, BiFunction<I, I, O> operator) {
@@ -22,7 +22,7 @@ public interface BinaryOperator<I extends Comparable<I>, O extends Comparable<O>
     }
 
     @Value
-    class Equality<T extends Comparable<T>> implements BinaryOperator<T, Boolean> {
+    class StrictEquality<T extends Comparable<T>> implements BinaryOperator<T, Boolean> {
         @Override
         public Boolean evaluate(T left, T right) {
             return Objects.equals(left, right);

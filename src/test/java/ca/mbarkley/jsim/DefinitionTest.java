@@ -2,7 +2,7 @@ package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.eval.Evaluation;
 import ca.mbarkley.jsim.eval.EvaluationException;
-import ca.mbarkley.jsim.eval.EvaluationException.DiceTypeException;
+import ca.mbarkley.jsim.eval.EvaluationException.TypeUnificationException;
 import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import ca.mbarkley.jsim.model.Expression.Constant;
@@ -305,7 +305,7 @@ public class DefinitionTest {
                           .containsOnlyKeys(vector1, vector2, vector3);
     }
 
-    @Test(expected = DiceTypeException.class)
+    @Test(expected = TypeUnificationException.class)
     public void mismatchedDiceType() {
         parser.parse("define myTest = [1, 3, true]; myTest + 1");
     }

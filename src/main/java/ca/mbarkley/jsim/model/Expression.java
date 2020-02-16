@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static ca.mbarkley.jsim.model.ArithmeticOperators.lookupBinaryOp;
+import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.prob.Event.productOfIndependent;
 import static ca.mbarkley.jsim.util.FormatUtils.formatAsPercentage;
 import static java.lang.String.format;
@@ -158,7 +158,6 @@ public abstract class Expression<T extends Comparable<T>> {
     @Value
     @EqualsAndHashCode(callSuper = false)
     public static class BinaryOpExpression<T extends Comparable<T>> extends Expression<T> {
-        Type<T> type;
         Expression<T> left;
         BinaryOperator<T, T> operator;
         Expression<T> right;
@@ -170,7 +169,7 @@ public abstract class Expression<T extends Comparable<T>> {
 
         @Override
         public Type<T> getType() {
-            return type;
+            return operator.getOutputType(left.getType(), right.getType());
         }
 
         @Override

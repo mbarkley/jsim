@@ -81,7 +81,7 @@ public abstract class Types {
             if (viableTargets.size() == 1) {
                 return viableTargets.iterator().next();
             } else {
-                throw new EvaluationException.DiceTypeException(types, viableTargets);
+                throw new EvaluationException.TypeUnificationException(types, viableTargets);
             }
         } else {
             return types.iterator().next();
