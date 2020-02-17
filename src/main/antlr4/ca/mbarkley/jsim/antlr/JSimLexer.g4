@@ -59,6 +59,10 @@ ROLL : NUMBER? D NUMBER ((H|L) NUMBER)?;
 
 DEFINE : 'define';
 
+LET : 'let';
+
+IN : 'in';
+
 IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]*;
 
 SYMBOL : [':]IDENTIFIER;

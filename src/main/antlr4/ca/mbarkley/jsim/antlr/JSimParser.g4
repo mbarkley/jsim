@@ -19,8 +19,7 @@ diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 diceSideDeclaration : expression;
 
 expression : arithmeticExpression |
-             booleanExpression |
-             reference;
+             booleanExpression;
 
 booleanExpression : LB booleanExpression RB |
                     booleanExpression AND booleanExpression |
@@ -29,7 +28,8 @@ booleanExpression : LB booleanExpression RB |
                     booleanExpression EQ booleanExpression |
                     arithmeticComparison |
                     booleanLiteral |
-                    reference;
+                    reference |
+                    letExpression;
 
 arithmeticComparison : arithmeticExpression LT arithmeticExpression |
                        arithmeticExpression GT arithmeticExpression;
@@ -41,7 +41,10 @@ arithmeticExpression : LB arithmeticExpression RB |
                        multiplicativeTerm |
                        arithmeticLiteral |
                        reference |
-                       vectorComponentRestriction;
+                       vectorComponentRestriction |
+                       letExpression;
+
+letExpression : LET IDENTIFIER EQ expression IN expression;
 
 vectorComponentRestriction: (reference | vectorLiteral) LCB SYMBOL RCB;
 
