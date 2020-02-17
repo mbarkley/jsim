@@ -1,6 +1,5 @@
 package ca.mbarkley.jsim.model;
 
-import ca.mbarkley.jsim.eval.RuntimeContext;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
 import lombok.Value;

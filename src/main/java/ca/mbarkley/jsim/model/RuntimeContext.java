@@ -1,4 +1,4 @@
-package ca.mbarkley.jsim.eval;
+package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.model.Expression.Constant;
 import lombok.Value;
@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Value
-public class RuntimeContext {
+class RuntimeContext {
     Map<String, Constant<?>> definitions;
 
     public RuntimeContext with(String identifier, Constant<?> value) {

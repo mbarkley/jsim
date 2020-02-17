@@ -153,7 +153,7 @@ public class Parser {
                                                         throw new IllegalStateException("Can only generate event list for a constant");
                                                     }
                                                 })
-                                                .flatMap(exp -> exp.events(new RuntimeContext(Map.of())))
+                                                .flatMap(exp -> exp.calculateResults().values().stream())
                                                 .map(e -> new Event<>(e.getValue(), e.getProbability() / values.size()))
                                                 .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
                                                 .entrySet()

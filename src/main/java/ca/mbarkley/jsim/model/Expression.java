@@ -1,6 +1,5 @@
 package ca.mbarkley.jsim.model;
 
-import ca.mbarkley.jsim.eval.RuntimeContext;
 import ca.mbarkley.jsim.model.ExpressionConverter.ValueConverter;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
@@ -148,6 +147,11 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Type<T> getType() {
             return type;
+        }
+
+        @Override
+        public String toString() {
+            return identifier;
         }
     }
 

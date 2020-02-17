@@ -320,4 +320,21 @@ public class CalculatorTest {
         assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0/36.0, offset))
                           .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(35.0/36.0, offset));
     }
+
+    @Test
+    public void imperialAssaultTest() {
+        // Want to do modulo operator for this use-case but isn't implemented yet
+        final List<Expression<?>> stmts = parser.parse("define green = ['s+'r,'s+'d+'r,2'd+'r,'s+'d+2'r,2'd+2'r,2'd+3'r]; let r <- green + green in r{'r} > 2 and r{'d} > 0").getExpressions();
+
+        final Map<Boolean, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(3.0 / 4.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0 / 4.0, offset))
+                          .hasSize(2);
+    }
 }

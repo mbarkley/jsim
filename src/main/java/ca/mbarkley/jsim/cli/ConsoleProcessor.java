@@ -1,6 +1,9 @@
 package ca.mbarkley.jsim.cli;
 
-import ca.mbarkley.jsim.eval.*;
+import ca.mbarkley.jsim.eval.Evaluation;
+import ca.mbarkley.jsim.eval.EvaluationException;
+import ca.mbarkley.jsim.eval.LexicalScope;
+import ca.mbarkley.jsim.eval.Parser;
 import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 
@@ -30,7 +33,9 @@ public class ConsoleProcessor {
                     final Evaluation eval = parser.parse(new LexicalScope(definitions), line);
                     definitions.putAll(eval.getContext().getDefinitions());
                     for (var expression : eval.getExpressions()) {
-                        final String sortedHistogram = displayer.createSortedHistogram(expression.toString(), expression.events(new RuntimeContext(Map.of())));
+                        final String sortedHistogram = displayer.createSortedHistogram(expression.toString(), expression.calculateResults()
+                                                                                                                        .values()
+                                                                                                                        .stream());
                         console.printf("%s", sortedHistogram);
                     }
                 } catch (RecognitionException re) {
