@@ -3,6 +3,7 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
+import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
@@ -22,6 +23,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.model.Converter.converters;
@@ -251,7 +253,7 @@ public class Parser {
                 if (Types.BOOLEAN_TYPE.isAssignableFrom(expression.getType())) {
                     return (Expression<Boolean>) expression;
                 } else {
-                    throw new EvaluationException.InvalidTypeException(Types.BOOLEAN_TYPE, expression.getType());
+                    throw new InvalidTypeException(Types.BOOLEAN_TYPE, expression.getType());
                 }
             } else {
                 throw new UnsupportedOperationException(format("Unknown expression kind [%s]", ctx.getText()));
@@ -297,9 +299,46 @@ public class Parser {
                 return visitReference(evalCtx, ctx.reference());
             } else if (ctx.multiplicativeTerm() != null) {
                 return visitMultiplicativeTerm(evalCtx, ctx.multiplicativeTerm());
+            } else if (ctx.vectorComponentRestriction() != null) {
+                return visitVectorComponentRestriction(evalCtx, ctx.vectorComponentRestriction());
             } else {
                 throw unsupportedExpression(ctx);
             }
+        }
+
+        private Expression<?> visitVectorComponentRestriction(Context evalCtx, JSimParser.VectorComponentRestrictionContext ctx) {
+            final Expression<Vector> vectorExpression;
+            final Symbol symbol;
+            if (ctx.reference() != null) {
+                final Expression<?> refExpression = visitReference(evalCtx, ctx.reference());
+                if (refExpression.getType().typeClass().equals(Types.VECTOR_TYPE_CLASS)) {
+                    vectorExpression = (Expression<Vector>) refExpression;
+                } else {
+                    throw new InvalidTypeException(format("Reference [%s] in vector component restriction must be vector type but was [%s]", ctx.reference().getText(), refExpression.getType()));
+                }
+            } else if (ctx.vectorLiteral() != null) {
+                vectorExpression = visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+            } else {
+                throw unsupportedExpression(ctx);
+            }
+            if (ctx.SYMBOL() != null) {
+                symbol = Symbol.fromText(ctx.SYMBOL().getText());
+            } else {
+                throw unsupportedExpression(ctx);
+            }
+
+            final VectorType vectorType = (VectorType) vectorExpression.getType();
+            final Type<?> componentType = vectorType.getDimensions().computeIfAbsent(symbol, s -> {
+                throw new IllegalArgumentException(format("Invalid symbol [%s] for vector type [%s]", symbol, vectorType));
+            });
+            final List<Event> mapped = vectorExpression.events()
+                                                       .map(e -> new Event(e.getValue()
+                                                                            .getCoordinate(symbol)
+                                                                            .getValue(),
+                                                                           e.getProbability()))
+                                                       .collect(toList());
+
+            return new EventList(componentType, mapped);
         }
 
         private Expression<?> visitMultiplicativeTerm(Context evalCtx, JSimParser.MultiplicativeTermContext ctx) {
@@ -384,7 +423,7 @@ public class Parser {
 
         }
 
-        private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
+        private Constant<Vector> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
             SortedMap<Symbol, Type<?>> typesByDimName = new TreeMap<>();
             SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>();
             for (var dim : ctx.dimension()) {

@@ -40,7 +40,10 @@ arithmeticExpression : LB arithmeticExpression RB |
                        arithmeticExpression (PLUS|MINUS) arithmeticExpression |
                        multiplicativeTerm |
                        arithmeticLiteral |
-                       reference;
+                       reference |
+                       vectorComponentRestriction;
+
+vectorComponentRestriction: (reference | vectorLiteral) LCB SYMBOL RCB;
 
 multiplicativeTerm: NUMBER (reference | SYMBOL);
 

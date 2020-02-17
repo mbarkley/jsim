@@ -21,6 +21,15 @@ public class Vector implements Comparable<Vector> {
     @Getter
     private final SortedMap<Symbol, Constant<?>> coordinate;
 
+    public Constant<?> getCoordinate(Symbol symbol) {
+        final Type<?> componentType = this.type.getDimensions().get(symbol);
+        if (componentType != null) {
+            return coordinate.getOrDefault(symbol, componentType.zeroAsConstant());
+        } else {
+            throw new IllegalArgumentException(format("Invalid symbol [%s] for vector type [%s]", symbol, this));
+        }
+    }
+
     @Override
     public int compareTo(Vector o) {
         return type.compare(this, o);

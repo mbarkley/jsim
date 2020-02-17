@@ -121,11 +121,11 @@ public class VectorTest {
 
     @Test
     public void propertyAccessTest() {
-        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test['v]");
+        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test{'v}");
 
-        assertThat(eval.getExpressions()).hasSize(2);
+        assertThat(eval.getExpressions()).hasSize(1);
         final Map<Integer, Double> result = eval.getExpressions()
-                                                .get(1)
+                                                .get(0)
                                                 .calculateResults()
                                                 .entrySet()
                                                 .stream()
