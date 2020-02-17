@@ -7,6 +7,7 @@ import ca.mbarkley.jsim.eval.EvaluationException.UnknownOperatorException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
+import ca.mbarkley.jsim.model.Converter.ConverterKey;
 import ca.mbarkley.jsim.model.Expression.*;
 import ca.mbarkley.jsim.model.IntegerExpression.HighDice;
 import ca.mbarkley.jsim.model.IntegerExpression.HomogeneousDicePool;
@@ -22,6 +23,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.model.Converter.converters;
@@ -137,7 +139,7 @@ public class Parser {
                 final List<Constant<?>> newValues =
                         (List) values.stream()
                                      .map(c -> {
-                                         final Converter converter = converters.get(new Converter.ConverterKey(c.getType().typeClass(), targetType.typeClass()));
+                                         final Converter converter = converters.get(new ConverterKey(c.getType().typeClass(), targetType.typeClass()));
                                          final Comparable converted = converter.convert(c.getValue(), targetType);
 
                                          return new Constant(targetType, converted);
@@ -228,7 +230,18 @@ public class Parser {
                 if (left.getType().typeClass().equals(right.getType().typeClass())) {
                     return new ComparisonExpression(left, BinaryOperator.strictEquality(), right);
                 } else {
-                    throw new EvaluationException.InvalidTypeException(format("Cannot test equality for types [%s] and [%s]", left.getType(), right.getType()));
+                    final Type<?> commonType = Types.findCommonType(Set.of(left.getType(), right.getType()));
+                    final Converter leftConverter = converters.get(new ConverterKey(left.getType().typeClass(), commonType.typeClass()));
+                    final Converter rightConverter = converters.get(new ConverterKey(right.getType().typeClass(), commonType.typeClass()));
+
+                    final Expression<?> newLeft = new EventList(commonType, left.events()
+                                                                                .map(e -> new Event(leftConverter.convert(e.getValue(), commonType), e.getProbability()))
+                                                                                .collect(toList()));
+                    final Expression<?> newRight = new EventList(commonType, right.events()
+                                                                                  .map(e -> new Event(rightConverter.convert(e.getValue(), commonType), e.getProbability()))
+                                                                                  .collect(toList()));
+
+                    return new ComparisonExpression(newLeft, BinaryOperator.strictEquality(), newRight);
                 }
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
@@ -409,8 +422,7 @@ public class Parser {
         }
     }
 
-    private static Expression<Vector> symbolToVector(Expression<Symbol> refExpression) {
-        Expression<Vector> expression;
+    private static Expression<Vector> symbolToVector(final Expression<Symbol> refExpression) {
         final List<Event<Vector>> vectors = refExpression.events()
                                                          .map(symbolEvent -> new Event<>(new Vector(new VectorType(new TreeMap<>(Map.of(symbolEvent.getValue(), Types.INTEGER_TYPE))),
                                                                                                     new TreeMap<>(Map.of(symbolEvent.getValue(), new Constant<>(Types.INTEGER_TYPE, 1)))),
@@ -421,8 +433,7 @@ public class Parser {
                                        .reduce((v1, v2) -> Types.mergeVectorTypes(List.of(v1, v2)))
                                        .orElse(Types.EMPTY_VECTOR_TYPE);
 
-        expression = new EventList<>(type, vectors);
-        return expression;
+        return new EventList<>(type, vectors);
     }
 
     private static Constant<Integer> number(TerminalNode number) {

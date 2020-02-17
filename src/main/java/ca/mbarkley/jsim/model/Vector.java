@@ -1,17 +1,25 @@
 package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.model.Expression.Constant;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
-@Value
+@RequiredArgsConstructor
 public class Vector implements Comparable<Vector> {
-    Type.VectorType type;
-    SortedMap<Symbol, Constant<?>> coordinate;
+    @Getter
+    private final Type.VectorType type;
+    @Getter
+    private final SortedMap<Symbol, Constant<?>> coordinate;
 
     @Override
     public int compareTo(Vector o) {
@@ -19,21 +27,32 @@ public class Vector implements Comparable<Vector> {
     }
 
     @Override
+    public boolean equals(Object o) {
+        return o instanceof Vector && equals((Vector) o);
+    }
+
+    public boolean equals(Vector vector) {
+        return compareTo(vector) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, coordinate);
+    }
+
+    @Override
     public String toString() {
-        final String inner = type.getDimensions()
-                                 .entrySet()
-                                 .stream()
-                                 .map(e -> {
-                                     final Constant<?> value = coordinate.get(e.getKey());
-                                     if (value != null) {
-                                         return e.getKey() + "=" + value.toString();
-                                     } else {
-                                         return e.getKey() + "=" + e.getValue().zero().toString();
-                                     }
-                                 })
-                                 .collect(Collectors.joining(", "));
+        final String inner = coordinates().map(e -> format("%s=%s", e.getKey(), e.getValue().getValue()))
+                                          .collect(Collectors.joining(", "));
 
         return format("{%s}", inner);
+    }
+
+    public Stream<Entry<Symbol, Constant<?>>> coordinates() {
+        return type.getDimensions()
+                   .entrySet()
+                   .stream()
+                   .map(e -> Map.entry(e.getKey(), coordinate.getOrDefault(e.getKey(), e.getValue().zeroAsConstant())));
     }
 
     @Value
