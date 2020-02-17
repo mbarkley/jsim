@@ -183,43 +183,10 @@ public abstract class Expression<T extends Comparable<T>> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
-    public static class ComparisonExpression<I extends Comparable<I>> extends Expression<Boolean> {
+    public static class BinaryOpExpression<I extends Comparable<I>, T extends Comparable<T>> extends Expression<T> {
         Expression<I> left;
-        BinaryOperator<I, Boolean> comparator;
+        BinaryOperator<I, T> operator;
         Expression<I> right;
-
-        @Override
-        public Stream<Event<Boolean>> events() {
-            final Stream<Event<I>> left = getLeft().events();
-            final Stream<Event<I>> right = getRight().events();
-
-            return productOfIndependent(left,
-                                        right,
-                                        comparator::evaluate);
-        }
-
-        @Override
-        public boolean isConstant() {
-            return left.isConstant() && right.isConstant();
-        }
-
-        @Override
-        public Type<Boolean> getType() {
-            return Types.BOOLEAN_TYPE;
-        }
-
-        @Override
-        public String toString() {
-            return format("%s %s %s", left, comparator.getSymbol(), right);
-        }
-    }
-
-    @Value
-    @EqualsAndHashCode(callSuper = false)
-    public static class BinaryOpExpression<T extends Comparable<T>> extends Expression<T> {
-        Expression<T> left;
-        BinaryOperator<T, T> operator;
-        Expression<T> right;
 
         @Override
         public Stream<Event<T>> events() {

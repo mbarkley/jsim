@@ -5,7 +5,6 @@ import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
 import ca.mbarkley.jsim.model.Expression.BinaryOpExpression;
 import ca.mbarkley.jsim.model.Expression.Bracketed;
-import ca.mbarkley.jsim.model.Expression.ComparisonExpression;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.IntegerExpression.HighDice;
 import ca.mbarkley.jsim.model.IntegerExpression.HomogeneousDicePool;
@@ -157,7 +156,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final Expression<Boolean> expected = new ComparisonExpression<>(left, IntegerComparisons.lessThan, right);
+        final Expression<Boolean> expected = new BinaryOpExpression<>(left, IntegerComparisons.lessThan, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -169,7 +168,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final Expression<Boolean> expected = new ComparisonExpression<>(left, IntegerComparisons.greaterThan, right);
+        final Expression<Boolean> expected = new BinaryOpExpression<>(left, IntegerComparisons.greaterThan, right);
         assertThat(result).containsExactly(expected);
     }
 
@@ -181,7 +180,7 @@ public class ParserTest {
 
         final IntegerExpression left = new HomogeneousDicePool(3, 8);
         final IntegerExpression right = new HomogeneousDicePool(2, 6);
-        final Expression<Boolean> expected = new ComparisonExpression<>(left, BinaryOperator.strictEquality(), right);
+        final Expression<Boolean> expected = new BinaryOpExpression<>(left, BinaryOperator.strictEquality(), right);
         assertThat(result).containsExactly(expected);
     }
 

@@ -6,8 +6,6 @@ import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
 import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.eval.EvaluationException.UnknownOperatorException;
 import ca.mbarkley.jsim.model.*;
-import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
-import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
 import ca.mbarkley.jsim.model.Expression.*;
 import ca.mbarkley.jsim.model.ExpressionConverter.ConverterKey;
 import ca.mbarkley.jsim.model.IntegerExpression.HighDice;
@@ -51,9 +49,7 @@ public class Parser {
             throw ctx.exception;
         }
 
-        final ArithmeticExpressionVisitor arithmeticExpressionVisitor = new ArithmeticExpressionVisitor();
-        final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor(arithmeticExpressionVisitor);
-        final StatementVisitor visitor = new StatementVisitor(evalCtx, new ExpressionVisitor(arithmeticExpressionVisitor, booleanExpressionVisitor));
+        final StatementVisitor visitor = new StatementVisitor(evalCtx, new ExpressionVisitor());
 
         return visitor.visit(ctx);
     }
@@ -180,124 +176,49 @@ public class Parser {
 
     @RequiredArgsConstructor
     private static class ExpressionVisitor {
-        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
-        private final BooleanExpressionVisitor booleanExpressionVisitor;
-
         public Expression<?> visitExpression(Context evalCtx, JSimParser.ExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
-            } else if (ctx.booleanExpression() != null) {
-                return booleanExpressionVisitor.visitBooleanExpression(evalCtx, ctx.booleanExpression());
-            } else if (ctx.arithmeticExpression() != null) {
-                return arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression());
-            } else {
-                throw unsupportedExpression(ctx);
-            }
-        }
-
-        public Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
-            return arithmeticExpressionVisitor.visitVectorLiteral(evalCtx, ctx);
-        }
-    }
-
-    @RequiredArgsConstructor
-    private static class BooleanExpressionVisitor {
-        private final ArithmeticExpressionVisitor arithmeticExpressionVisitor;
-
-        public Expression<Boolean> visitBooleanExpression(Context evalCtx, JSimParser.BooleanExpressionContext ctx) {
-            if (ctx.exception != null) {
-                throw ctx.exception;
-            } else if (ctx.booleanLiteral() != null) {
-                return visitBooleanLiteral(evalCtx, ctx.booleanLiteral());
-            } else if (ctx.booleanExpression().size() == 2) {
-                final String booleanOperatorText = ctx.getChild(1).getText();
-                final BinaryOperator<Boolean, Boolean> operator = BooleanOperators.lookup(booleanOperatorText)
-                                                                                  .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized operator [%s]", booleanOperatorText)));
-
-                final Expression<Boolean> left = visitBooleanExpression(evalCtx, ctx.booleanExpression(0));
-                final Expression<Boolean> right = visitBooleanExpression(evalCtx, ctx.booleanExpression(1));
-
-                return new BinaryOpExpression<>(left, operator, right);
-            } else if (ctx.arithmeticExpression().size() == 2 && ctx.EQ() != null) {
-                final Expression<?> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
-                final Expression<?> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
-
-                final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
-
-                return foundCommonType.map(commonType -> {
-                    final Expression<?> newLeft = Types.convertExpression(left, commonType);
-                    final Expression<?> newRight = Types.convertExpression(right, commonType);
-
-                    return new ComparisonExpression(newLeft, BinaryOperator.strictEquality(), newRight);
-                }).orElseThrow(() -> new UnknownOperatorException(left.getType(), ctx.EQ().getText(), right.getType()));
-            } else if (ctx.booleanExpression().size() == 1) {
-                return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
-            } else if (ctx.arithmeticComparison() != null) {
-                return visitArithmeticComparison(evalCtx, ctx.arithmeticComparison());
-            } else if (ctx.reference() != null) {
-                return visitReference(evalCtx, ctx.reference());
-            } else {
-                throw new UnsupportedOperationException(format("Unknown part [%s]", ctx.getText()));
-            }
-        }
-
-        private Expression<Boolean> visitReference(Context evalCtx, JSimParser.ReferenceContext ctx) {
-            if (ctx.IDENTIFIER() != null) {
-                final Expression<?> expression = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
-                if (Types.BOOLEAN_TYPE.isAssignableFrom(expression.getType())) {
-                    return (Expression<Boolean>) expression;
-                } else {
-                    throw new InvalidTypeException(Types.BOOLEAN_TYPE, expression.getType());
-                }
-            } else {
-                throw new UnsupportedOperationException(format("Unknown expression kind [%s]", ctx.getText()));
-            }
-        }
-
-        public Expression<Boolean> visitArithmeticComparison(Context evalCtx, JSimParser.ArithmeticComparisonContext ctx) {
-            if (ctx.arithmeticExpression().size() == 2) {
-                final Expression<?> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
-                final Expression<?> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
-                final String comparatorText = ctx.getChild(1).getText();
-                final BinaryOperator<Integer, Boolean> comparator = IntegerComparisons.lookup(comparatorText)
-                                                                                      .orElseThrow(() -> new IllegalArgumentException(format("Unrecognized comparator [%s]", comparatorText)));
-
-                return new ComparisonExpression(left, comparator, right);
-            } else {
-                throw new IllegalStateException(ctx.getText());
-            }
-        }
-
-        public Expression<Boolean> visitBooleanLiteral(Context evalCtx, JSimParser.BooleanLiteralContext ctx) {
-            if (ctx.TRUE() != null) {
-                return BooleanExpression.TRUE;
-            } else if (ctx.FALSE() != null) {
-                return BooleanExpression.FALSE;
-            } else {
-                throw new IllegalStateException();
-            }
-        }
-    }
-
-    private static class ArithmeticExpressionVisitor {
-        public Expression<?> visitArithmeticExpression(Context evalCtx, JSimParser.ArithmeticExpressionContext ctx) {
-            if (ctx.exception != null) {
-                throw ctx.exception;
-            } else if (ctx.arithmeticExpression().size() == 2) {
-                return visitBinaryExpression(evalCtx, ctx);
-            } else if (ctx.arithmeticExpression().size() == 1) {
-                return new Bracketed<>(visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0)));
-            } else if (ctx.arithmeticLiteral() != null) {
-                return visitArithmeticLiteral(evalCtx, ctx.arithmeticLiteral());
+            } else if (ctx.literal() != null) {
+                return visitLiteral(evalCtx, ctx.literal());
             } else if (ctx.reference() != null) {
                 return visitReference(evalCtx, ctx.reference());
             } else if (ctx.multiplicativeTerm() != null) {
                 return visitMultiplicativeTerm(evalCtx, ctx.multiplicativeTerm());
             } else if (ctx.vectorComponentRestriction() != null) {
                 return visitVectorComponentRestriction(evalCtx, ctx.vectorComponentRestriction());
+            } else if (ctx.LB() != null && ctx.RB() != null && ctx.expression().size() == 1) {
+                return new Bracketed<>(visitExpression(evalCtx, ctx.expression(0)));
+            } else if (ctx.expression().size() == 2
+                    && ctx.getChildCount() == 3
+                    && ctx.getChild(1) instanceof TerminalNode) {
+                return visitBinaryExpression(evalCtx, ctx);
+            } else if (ctx.letExpression() != null) {
+                return visitLetExpression(evalCtx, ctx.letExpression());
             } else {
                 throw unsupportedExpression(ctx);
             }
+        }
+
+        private Expression<?> visitBinaryExpression(Context evalCtx, JSimParser.ExpressionContext ctx) {
+            final Expression<?> left = visitExpression(evalCtx, ctx.expression(0));
+            final Expression<?> right = visitExpression(evalCtx, ctx.expression(1));
+            final String operatorSymbol = ctx.getChild(1).getText();
+
+            final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
+
+            return foundCommonType.map(commonType -> {
+                final BinaryOperator<?, ?> sign = lookupBinaryOp(commonType, commonType, operatorSymbol)
+                        .orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
+                final Expression<?> newLeft = Types.convertExpression(left, commonType);
+                final Expression<?> newRight = Types.convertExpression(right, commonType);
+
+                return new BinaryOpExpression(newLeft, sign, newRight);
+            }).orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
+        }
+
+        private Expression<?> visitLetExpression(Context evalCtx, JSimParser.LetExpressionContext ctx) {
+            throw new UnsupportedOperationException("Not yet implemented!");
         }
 
         private Expression<?> visitVectorComponentRestriction(Context evalCtx, JSimParser.VectorComponentRestrictionContext ctx) {
@@ -335,6 +256,42 @@ public class Parser {
             return new EventList(componentType, mapped);
         }
 
+        private Expression<Vector> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
+            SortedMap<Symbol, Type<?>> typesByDimName = new TreeMap<>();
+            SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>();
+            for (var dim : ctx.dimension()) {
+                final Symbol name = Symbol.fromText(dim.SYMBOL().getText());
+                final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
+                typesByDimName.compute(name, (k, v) -> {
+                    if (v == null) {
+                        return value.getType();
+                    } else {
+                        throw new EvaluationException.DuplicateDimensionDeclarationException(ctx, k);
+                    }
+                });
+                coordinate.put(name, value);
+            }
+
+            final VectorType vectorType = new VectorType(typesByDimName);
+            return new Constant<>(vectorType, new Vector(vectorType, coordinate));
+        }
+
+        private Constant<?> visitDimensionValue(Context evalCtx, JSimParser.DimensionValueContext ctx) {
+            if (ctx.IDENTIFIER() != null) {
+                final Expression<?> identifierValue = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+                if (identifierValue instanceof Constant) {
+                    return (Constant<?>) identifierValue;
+                } else {
+                    throw new EvaluationException(format("Invalid identifier [%s] in vector literal: expected constant but identifier had expression value [%s]", ctx.IDENTIFIER().getText(), identifierValue));
+                }
+            } else if (ctx.NUMBER() != null) {
+                final Integer value = Integer.parseInt(ctx.NUMBER().getText());
+                return new Constant<>(Types.INTEGER_TYPE, value);
+            } else {
+                throw new IllegalStateException(ctx.getText());
+            }
+        }
+
         private Expression<?> visitMultiplicativeTerm(Context evalCtx, JSimParser.MultiplicativeTermContext ctx) {
             final Constant<Integer> number = number(ctx.NUMBER());
             final Expression<Vector> expression;
@@ -364,9 +321,11 @@ public class Parser {
             }
         }
 
-        public Expression<?> visitArithmeticLiteral(Context evalCtx, JSimParser.ArithmeticLiteralContext ctx) {
-            if (ctx.exception != null) {
-                throw ctx.exception;
+        private Expression<?> visitLiteral(Context evalCtx, JSimParser.LiteralContext ctx) {
+            if (ctx.booleanLiteral() != null) {
+                return visitBooleanLiteral(ctx.booleanLiteral());
+            } else if (ctx.vectorLiteral() != null) {
+                return visitVectorLiteral(evalCtx, ctx.vectorLiteral());
             } else if (ctx.NUMBER() != null) {
                 return number(ctx.NUMBER());
             } else if (ctx.ROLL() != null) {
@@ -389,66 +348,20 @@ public class Parser {
                 }
 
                 throw new IllegalStateException(format("Unrecognized roll: %s", ctx.ROLL().getText()));
-            } else if (ctx.vectorLiteral() != null) {
-                return visitVectorLiteral(evalCtx, ctx.vectorLiteral());
             } else if (ctx.SYMBOL() != null) {
                 return symbol(ctx.SYMBOL());
             } else {
-                throw new IllegalStateException(ctx.toString());
+                throw unsupportedExpression(ctx);
             }
         }
 
-        private Expression<?> visitBinaryExpression(Context evalCtx, JSimParser.ArithmeticExpressionContext ctx) {
-            final Expression<?> left = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
-            final Expression<?> right = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
-            final String operatorSymbol = ctx.getChild(1).getText();
-
-            final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
-
-            return foundCommonType.map(commonType -> {
-                final BinaryOperator<?, ?> sign = lookupBinaryOp(commonType, commonType, operatorSymbol)
-                        .orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
-                final Expression<?> newLeft = Types.convertExpression(left, commonType);
-                final Expression<?> newRight = Types.convertExpression(right, commonType);
-
-                return new BinaryOpExpression(newLeft, sign, newRight);
-            }).orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
-        }
-
-        private Constant<Vector> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
-            SortedMap<Symbol, Type<?>> typesByDimName = new TreeMap<>();
-            SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>();
-            for (var dim : ctx.dimension()) {
-                final Symbol name = Symbol.fromText(dim.SYMBOL().getText());
-                final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
-                typesByDimName.compute(name, (k, v) -> {
-                    if (v == null) {
-                        return value.getType();
-                    } else {
-                        throw new EvaluationException.DuplicateDimensionDeclarationException(ctx, k);
-                    }
-                });
-                coordinate.put(name, value);
-            }
-
-            final VectorType vectorType = new VectorType(typesByDimName);
-            return new Constant<>(vectorType, new Vector(vectorType, coordinate));
-        }
-
-        private Constant<?> visitDimensionValue(Context evalCtx, JSimParser.DimensionValueContext ctx) {
-            if (ctx.IDENTIFIER() != null) {
-                final Expression<?> identifierValue = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
-                if (identifierValue instanceof Constant) {
-                    return (Constant<?>) identifierValue;
-                } else {
-                    throw new EvaluationException(format("Invalid identifier [%s] in vector literal: expected constant but identifier had expression value [%s]", ctx.IDENTIFIER().getText(), identifierValue));
-                }
-            } else if (ctx.NUMBER() != null) {
-                // OpenJDK cannot compile with type argument here
-                final Integer value = Integer.parseInt(ctx.NUMBER().getText());
-                return new Constant<>(Types.INTEGER_TYPE, value);
+        private Expression<?> visitBooleanLiteral(JSimParser.BooleanLiteralContext ctx) {
+            if (ctx.TRUE() != null) {
+                return BooleanExpression.TRUE;
+            } else if (ctx.FALSE() != null) {
+                return BooleanExpression.FALSE;
             } else {
-                throw new IllegalStateException(ctx.getText());
+                throw new IllegalStateException();
             }
         }
     }

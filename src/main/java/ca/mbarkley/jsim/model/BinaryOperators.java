@@ -2,10 +2,15 @@ package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
+import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
+import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static ca.mbarkley.jsim.model.Types.VECTOR_TYPE_CLASS;
 import static ca.mbarkley.jsim.model.Types.mergeVectorTypes;
@@ -20,8 +25,9 @@ public abstract class BinaryOperators {
     public static final BinaryOperator<Integer, Integer> division = BinaryOperator.create(Types.INTEGER_TYPE, "/", (l, r) -> l/r);
 
     @SuppressWarnings("unchecked")
-    public static <T extends Comparable<T>> Optional<? extends BinaryOperator<T, T>> lookupBinaryOp(Type<?> left, Type<?> right, String symbol) {
+    public static <T extends Comparable<T>> Optional<? extends BinaryOperator<T, T>> lookupBinaryOp(Type<?> left, Type<?> right, String rawSymbol) {
         final Optional<Type<?>> foundOperandType = Types.findCommonType(left, right);
+        final String symbol = rawSymbol.toLowerCase();
 
         return foundOperandType.flatMap(operandType -> {
             switch (symbol) {
@@ -43,6 +49,18 @@ public abstract class BinaryOperators {
                         return (Optional) Optional.of(new VectorBinaryOperation(symbol));
                     }
                     break;
+                case "=":
+                    return (Optional) Optional.of(BinaryOperator.strictEquality());
+                case "<":
+                case ">":
+                    if (Types.INTEGER_TYPE.equals(operandType)) {
+                        return (Optional) IntegerComparisons.lookup(symbol);
+                    }
+                case "and":
+                case "or":
+                    if (Types.BOOLEAN_TYPE.equals(operandType)) {
+                        return (Optional) BooleanOperators.lookup(symbol);
+                    }
             }
 
             return Optional.empty();

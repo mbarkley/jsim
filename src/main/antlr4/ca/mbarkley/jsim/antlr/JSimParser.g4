@@ -32,37 +32,26 @@ diceSideDeclaration
     ;
 
 expression
-    : arithmeticExpression
-    | booleanExpression
-    ;
-
-booleanExpression
-    : LB booleanExpression RB
-    | booleanExpression AND booleanExpression
-    | booleanExpression OR booleanExpression
-    | arithmeticExpression EQ arithmeticExpression
-    | booleanExpression EQ booleanExpression
-    | arithmeticComparison
-    | booleanLiteral
-    | reference
+    : LB expression RB
+    | expression DIVIDE expression
+    | expression TIMES expression
+    | expression (PLUS|MINUS) expression
+    | expression (LT|GT|EQ) expression
+    | expression AND expression
+    | expression OR expression
     | letExpression
-    ;
-
-arithmeticComparison
-    : arithmeticExpression LT arithmeticExpression
-    | arithmeticExpression GT arithmeticExpression
-    ;
-
-arithmeticExpression
-    : LB arithmeticExpression RB
-    | arithmeticExpression DIVIDE arithmeticExpression
-    | arithmeticExpression TIMES arithmeticExpression
-    | arithmeticExpression (PLUS|MINUS) arithmeticExpression
+    | reference
     | multiplicativeTerm
-    | arithmeticLiteral
-    | reference
     | vectorComponentRestriction
-    | letExpression
+    | literal
+    ;
+
+literal
+    : booleanLiteral
+    | vectorLiteral
+    | NUMBER
+    | ROLL
+    | SYMBOL
     ;
 
 letExpression
@@ -80,13 +69,6 @@ multiplicativeTerm
 
 reference
     : IDENTIFIER
-    ;
-
-arithmeticLiteral
-    : NUMBER
-    | ROLL
-    | vectorLiteral
-    | SYMBOL
     ;
 
 booleanLiteral
