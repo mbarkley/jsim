@@ -190,8 +190,8 @@ public class Parser {
                 return visitReference(scope, ctx.reference());
             } else if (ctx.multiplicativeTerm() != null) {
                 return visitMultiplicativeTerm(scope, ctx.multiplicativeTerm());
-            } else if (ctx.vectorComponentRestriction() != null) {
-                return visitVectorComponentRestriction(scope, ctx.vectorComponentRestriction());
+            } else if (ctx.expression().size() == 1 && ctx.LCB() != null && ctx.RCB() != null && ctx.SYMBOL() != null) {
+                return visitVectorComponentRestriction(scope, ctx);
             } else if (ctx.LB() != null && ctx.RB() != null && ctx.expression().size() == 1) {
                 return new Bracketed<>(visitExpression(scope, ctx.expression(0)));
             } else if (ctx.expression().size() == 2
@@ -230,20 +230,14 @@ public class Parser {
             return new BindExpression<>(identifier, bindExpression, valueExpression);
         }
 
-        private Expression<?> visitVectorComponentRestriction(LexicalScope scope, JSimParser.VectorComponentRestrictionContext ctx) {
+        private Expression<?> visitVectorComponentRestriction(LexicalScope scope, JSimParser.ExpressionContext ctx) {
             final Expression<Vector> vectorExpression;
             final Symbol symbol;
-            if (ctx.reference() != null) {
-                final Expression<?> refExpression = visitReference(scope, ctx.reference());
-                if (refExpression.getType().typeClass().equals(Types.VECTOR_TYPE_CLASS)) {
-                    vectorExpression = (Expression<Vector>) refExpression;
-                } else {
-                    throw new InvalidTypeException(format("Reference [%s] in vector component restriction must be vector type but was [%s]", ctx.reference().getText(), refExpression.getType()));
-                }
-            } else if (ctx.vectorLiteral() != null) {
-                vectorExpression = visitVectorLiteral(scope, ctx.vectorLiteral());
+            final Expression<?> expression = visitExpression(scope, ctx.expression(0));
+            if (Types.VECTOR_TYPE_CLASS.equals(expression.getType().typeClass())) {
+                vectorExpression = (Expression<Vector>) expression;
             } else {
-                throw unsupportedExpression(ctx);
+                throw new InvalidTypeException(format("Expression [%s] in vector component access must be vector type but was [%s]", ctx.expression(0).getText(), expression.getType()));
             }
             if (ctx.SYMBOL() != null) {
                 symbol = Symbol.fromText(ctx.SYMBOL().getText());

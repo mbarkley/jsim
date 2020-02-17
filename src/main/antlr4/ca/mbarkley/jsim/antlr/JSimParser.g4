@@ -33,6 +33,7 @@ diceSideDeclaration
 
 expression
     : LB expression RB
+    | expression LCB SYMBOL RCB
     | expression DIVIDE expression
     | expression TIMES expression
     | expression (PLUS|MINUS) expression
@@ -40,9 +41,8 @@ expression
     | expression AND expression
     | expression OR expression
     | letExpression
-    | reference
     | multiplicativeTerm
-    | vectorComponentRestriction
+    | reference
     | literal
     ;
 
@@ -56,11 +56,6 @@ literal
 
 letExpression
     : LET IDENTIFIER LARROW expression IN expression
-    ;
-
-vectorComponentRestriction
-    : (reference
-    | vectorLiteral) LCB SYMBOL RCB
     ;
 
 multiplicativeTerm
@@ -77,7 +72,7 @@ booleanLiteral
     ;
 
 vectorLiteral
-    : LCB dimension (COMMA dimension)* RCB
+    : LCB (dimension (COMMA dimension)*)? RCB
     ;
 
 dimension

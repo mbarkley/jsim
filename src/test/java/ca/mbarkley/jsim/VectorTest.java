@@ -153,6 +153,21 @@ public class VectorTest {
     }
 
     @Test
+    public void indirectPropertyAccessTest() {
+        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; (test + {}){'v}");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Integer, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
+        assertThat(result.keySet()).containsExactlyInAnyOrder(1, 2);
+        assertThat(result.values()).allSatisfy(prob -> assertThat(prob).isCloseTo(0.5, offset(0.0001)));
+    }
+
+    @Test
     public void sumOfSymbolsAsDiceSides() {
         final Evaluation eval = parser.parse("define die = ['a + 'b, 2'a, 2'b]; die{'a} > 0");
 
