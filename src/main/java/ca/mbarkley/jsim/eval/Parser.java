@@ -124,12 +124,12 @@ public class Parser {
         }
 
         private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
-            final List<Constant<?>> values = ctx.diceSideDeclaration()
+            final List<Expression<?>> values = ctx.diceSideDeclaration()
                                                 .stream()
                                                 .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
                                                 .collect(toList());
             final Set<Type<?>> types = values.stream()
-                                             .map(Constant::getType)
+                                             .map(Expression::getType)
                                              .collect(toSet());
 
             if (values.isEmpty()) {
@@ -164,18 +164,14 @@ public class Parser {
             return new EventList(type, events);
         }
 
-        private Constant<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
-            if (ctx.NUMBER() != null) {
-                return number(ctx.NUMBER());
-            } else if (ctx.TRUE() != null) {
-                return BooleanExpression.TRUE;
-            } else if (ctx.FALSE() != null) {
-                return BooleanExpression.FALSE;
-            } else if (ctx.SYMBOL() != null) {
-                final Symbol symbol = Symbol.fromText(ctx.SYMBOL().getText());
-                return new Constant<>(Types.symbolTypeOf(symbol), symbol);
-            } else if (ctx.vectorLiteral() != null) {
-                return expressionVisitor.visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+        private Expression<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
+            if (ctx.expression() != null) {
+                final Expression<?> expression = expressionVisitor.visitExpression(evalCtx, ctx.expression());
+                if (expression.isConstant()) {
+                    return expression;
+                } else {
+                    throw new IllegalStateException(format("Cannot use non-constant expressions in dice declaration [%s]", ctx.getText()));
+                }
             } else {
                 throw new IllegalStateException(ctx.getText());
             }

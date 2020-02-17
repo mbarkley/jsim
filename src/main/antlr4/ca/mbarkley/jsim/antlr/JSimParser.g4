@@ -16,7 +16,7 @@ definitionBody : expression |
 
 diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
 
-diceSideDeclaration : NUMBER | TRUE | FALSE | SYMBOL | vectorLiteral;
+diceSideDeclaration : expression;
 
 expression : arithmeticExpression |
              booleanExpression |

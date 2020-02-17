@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.toMap;
 public abstract class Expression<T extends Comparable<T>> {
     protected Expression() {}
 
+    public abstract boolean isConstant();
     public abstract Stream<Event<T>> events();
 
     public Map<T, Event<T>> calculateResults() {
@@ -45,6 +46,11 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
+        public boolean isConstant() {
+            return subExpression.isConstant();
+        }
+
+        @Override
         public String toString() {
             return format("(%s)", subExpression);
         }
@@ -63,6 +69,11 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Stream<Event<T>> events() {
             return subExpression.events();
+        }
+
+        @Override
+        public boolean isConstant() {
+            return subExpression.isConstant();
         }
 
         @Override
@@ -93,6 +104,11 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
+        public boolean isConstant() {
+            return true;
+        }
+
+        @Override
         public Type<T> getType() {
             return type;
         }
@@ -113,6 +129,11 @@ public abstract class Expression<T extends Comparable<T>> {
         public Stream<Event<T>> events() {
             return expression.events()
                              .map(e -> new Event<>(mapper.convert(e.getValue()), e.getProbability()));
+        }
+
+        @Override
+        public boolean isConstant() {
+            return expression.isConstant();
         }
 
         @Override
@@ -137,6 +158,13 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Stream<Event<T>> events() {
             return values.stream();
+        }
+
+        @Override
+        public boolean isConstant() {
+            return values.size() == 1 ||
+                    values.size() > 1 && values.stream()
+                                               .allMatch(v -> values.get(0).getValue().equals(v.getValue()));
         }
 
         @Override
@@ -171,6 +199,11 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
+        public boolean isConstant() {
+            return left.isConstant() && right.isConstant();
+        }
+
+        @Override
         public Type<Boolean> getType() {
             return Types.BOOLEAN_TYPE;
         }
@@ -191,6 +224,11 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public Stream<Event<T>> events() {
             return productOfIndependent(left.events(), right.events(), operator::evaluate);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return left.isConstant() && right.isConstant();
         }
 
         @Override

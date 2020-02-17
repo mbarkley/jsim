@@ -151,4 +151,22 @@ public class VectorTest {
         assertThat(result.keySet()).containsExactlyInAnyOrder(1, 2);
         assertThat(result.values()).allSatisfy(prob -> assertThat(prob).isCloseTo(0.5, offset(0.0001)));
     }
+
+    @Test
+    public void sumOfSymbolsAsDiceSides() {
+        final Evaluation eval = parser.parse("define die = ['a + 'b, 2'a, 2'b]; die{'a} > 0");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        assertThat(result.entrySet()).containsExactlyInAnyOrder(
+                Map.entry(true, 2.0/3.0),
+                Map.entry(false, 1.0/3.0)
+        );
+    }
 }

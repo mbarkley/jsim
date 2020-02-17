@@ -41,6 +41,11 @@ public abstract class IntegerExpression extends Expression<Integer> {
                     .map(entry -> new Event<>(entry.getKey(), entry.getValue()));
         }
 
+        @Override
+        public boolean isConstant() {
+            return dicePool.isConstant();
+        }
+
         private List<Integer> updateValues(List<Integer> v1, List<Integer> v2) {
             return Stream.concat(v1.stream(), v2.stream())
                          .sorted(comparingInt(n -> (int) n).reversed())
@@ -75,6 +80,11 @@ public abstract class IntegerExpression extends Expression<Integer> {
                     .map(entry -> new Event<>(entry.getKey(), entry.getValue()));
         }
 
+        @Override
+        public boolean isConstant() {
+            return dicePool.isConstant();
+        }
+
         private List<Integer> updateValues(List<Integer> v1, List<Integer> v2) {
             return Stream.concat(v1.stream(), v2.stream())
                          .sorted(comparingInt(n -> (int) n))
@@ -101,6 +111,11 @@ public abstract class IntegerExpression extends Expression<Integer> {
                                                                         .collect(toList());
 
             return productOfIndependent(singleDieStreams, Integer::sum);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return diceSides > 1;
         }
 
         @Override
