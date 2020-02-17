@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.eval.RuntimeContext;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -27,7 +28,7 @@ public abstract class IntegerExpression extends Expression<Integer> {
         int numberOfDice;
 
         @Override
-        public Stream<Event<Integer>> events() {
+        public Stream<Event<Integer>> events(RuntimeContext ctx) {
             final List<Stream<Event<List<Integer>>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(dicePool.getDiceSides())
                                                                                                    .map(event -> new Event<>(List.of(event.getValue()), event.getProbability())))
                                                                               .limit(dicePool.getNumberOfDice())
@@ -66,7 +67,7 @@ public abstract class IntegerExpression extends Expression<Integer> {
         int numberOfDice;
 
         @Override
-        public Stream<Event<Integer>> events() {
+        public Stream<Event<Integer>> events(RuntimeContext ctx) {
             final List<Stream<Event<List<Integer>>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(dicePool.getDiceSides())
                                                                                                    .map(event -> new Event<>(List.of(event.getValue()), event.getProbability())))
                                                                               .limit(dicePool.getNumberOfDice())
@@ -105,7 +106,7 @@ public abstract class IntegerExpression extends Expression<Integer> {
         int diceSides;
 
         @Override
-        public Stream<Event<Integer>> events() {
+        public Stream<Event<Integer>> events(RuntimeContext ctx) {
             final List<Stream<Event<Integer>>> singleDieStreams = Stream.generate(() -> Event.singleDieEvents(diceSides))
                                                                         .limit(numberOfDice)
                                                                         .collect(toList());

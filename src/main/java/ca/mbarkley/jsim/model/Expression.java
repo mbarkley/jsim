@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.eval.RuntimeContext;
 import ca.mbarkley.jsim.model.ExpressionConverter.ValueConverter;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
@@ -7,6 +8,7 @@ import lombok.Value;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
@@ -21,10 +23,11 @@ public abstract class Expression<T extends Comparable<T>> {
     protected Expression() {}
 
     public abstract boolean isConstant();
-    public abstract Stream<Event<T>> events();
+    public abstract Stream<Event<T>> events(RuntimeContext ctx);
 
     public Map<T, Event<T>> calculateResults() {
-        return events().collect(toMap(Event::getValue, identity()));
+        final RuntimeContext ctx = new RuntimeContext(Map.of());
+        return events(ctx).collect(toMap(Event::getValue, identity(), (e1, e2) -> new Event<>(e1.getValue(), e1.getProbability() + e2.getProbability())));
     }
 
     public abstract Type<T> getType();
@@ -36,8 +39,8 @@ public abstract class Expression<T extends Comparable<T>> {
         Expression<Vector> subExpression;
 
         @Override
-        public Stream<Event<Vector>> events() {
-            final List<Stream<Event<Vector>>> singleEventStreams = Stream.generate(() -> subExpression.events())
+        public Stream<Event<Vector>> events(RuntimeContext ctx) {
+            final List<Stream<Event<Vector>>> singleEventStreams = Stream.generate(() -> subExpression.events(ctx))
                                                                          .limit(number)
                                                                          .collect(toList());
             final BinaryOperator<Vector, Vector> op = (BinaryOperator<Vector, Vector>) lookupBinaryOp(subExpression.getType(), subExpression.getType(), "+").get();
@@ -67,8 +70,8 @@ public abstract class Expression<T extends Comparable<T>> {
         Expression<T> subExpression;
 
         @Override
-        public Stream<Event<T>> events() {
-            return subExpression.events();
+        public Stream<Event<T>> events(RuntimeContext ctx) {
+            return subExpression.events(ctx);
         }
 
         @Override
@@ -99,7 +102,7 @@ public abstract class Expression<T extends Comparable<T>> {
         }
 
         @Override
-        public Stream<Event<T>> events() {
+        public Stream<Event<T>> events(RuntimeContext ctx) {
             return Stream.of(new Event<>(value, 1.0));
         }
 
@@ -121,13 +124,81 @@ public abstract class Expression<T extends Comparable<T>> {
 
     @Value
     @EqualsAndHashCode(callSuper = false)
+    public static class BoundConstant<T extends Comparable<T>> extends Expression<T> {
+        String identifier;
+        Type<T> type;
+
+        @Override
+        public boolean isConstant() {
+            return true;
+        }
+
+        @Override
+        public Stream<Event<T>> events(RuntimeContext ctx) {
+            final Constant<?> foundValue = Optional.ofNullable(ctx.getDefinitions()
+                                                                  .get(identifier))
+                                                   .orElseThrow(() -> new IllegalStateException(format("Expected runtime context to have binding for [%s] but context was [%s]", identifier, ctx)));
+
+            final T value = type.strictCast(foundValue
+                                               .getValue());
+
+            return Stream.of(new Event<>(value, 1.0));
+        }
+
+        @Override
+        public Type<T> getType() {
+            return type;
+        }
+    }
+
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class BindExpression<B extends Comparable<B>, T extends Comparable<T>> extends Expression<T> {
+        String boundIdentifier;
+        Expression<B> bindExpression;
+        Expression<T> valueExpression;
+
+        @Override
+        public Stream<Event<T>> events(RuntimeContext ctx) {
+            return bindExpression.events(ctx)
+                                 // TODO maybe group by same values here?
+                                 .flatMap(event -> {
+                                     final RuntimeContext subCtx = ctx.with(boundIdentifier, new Constant<>(bindExpression.getType(), event.getValue()));
+                                     return valueExpression.events(subCtx)
+                                                           .map(subEvent -> new Event<>(subEvent.getValue(), subEvent.getProbability() * event.getProbability()));
+                                 });
+        }
+
+        @Override
+        public boolean isConstant() {
+            /*
+             * We mostly only care about constants when declaring dice sides, so let's not worry
+             * too much about this and return false.
+             */
+            return false;
+        }
+
+        @Override
+        public Type<T> getType() {
+            return valueExpression.getType();
+        }
+
+        @Override
+        public String toString() {
+            return format("let %s <- %s in %s", boundIdentifier, bindExpression, valueExpression);
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
     public static class MappedExpression<S extends Comparable<S>, T extends Comparable<T>> extends Expression<T> {
         Expression<S> expression;
         ValueConverter<S, T> mapper;
 
         @Override
-        public Stream<Event<T>> events() {
-            return expression.events()
+        public Stream<Event<T>> events(RuntimeContext ctx) {
+            return expression.events(ctx)
                              .map(e -> new Event<>(mapper.convert(e.getValue()), e.getProbability()));
         }
 
@@ -143,9 +214,8 @@ public abstract class Expression<T extends Comparable<T>> {
 
         @Override
         public String toString() {
-            final String[] stringifedValues = events().map(event -> format("%s (%s)", event.getValue(), formatAsPercentage(event.getProbability())))
-                                                      .toArray(String[]::new);
-            return format("[%s]", String.join(", ", stringifedValues));
+            // FIXME there must be something better to do here?
+            return expression.toString();
         }
     }
 
@@ -156,7 +226,7 @@ public abstract class Expression<T extends Comparable<T>> {
         List<Event<T>> values;
 
         @Override
-        public Stream<Event<T>> events() {
+        public Stream<Event<T>> events(RuntimeContext ctx) {
             return values.stream();
         }
 
@@ -189,8 +259,8 @@ public abstract class Expression<T extends Comparable<T>> {
         Expression<I> right;
 
         @Override
-        public Stream<Event<T>> events() {
-            return productOfIndependent(left.events(), right.events(), operator::evaluate);
+        public Stream<Event<T>> events(RuntimeContext ctx) {
+            return productOfIndependent(left.events(ctx), right.events(ctx), operator::evaluate);
         }
 
         @Override

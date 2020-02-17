@@ -13,6 +13,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 public interface Type<T extends Comparable<T>> extends Comparator<T> {
+
     interface TypeClass<T extends Comparable<T>> {
         boolean isInstance(Type<?> type);
         Optional<Type<T>> unify(List<Type<T>> types);
@@ -22,6 +23,12 @@ public interface Type<T extends Comparable<T>> extends Comparator<T> {
     String name();
     boolean isAssignableFrom(Type<?> type);
     TypeClass<T> typeClass();
+
+    /**
+     * Performs a cast with absolutely no type coercion. Throws an {@link InvalidTypeException} if
+     * the given object does not exactly match this type.
+     */
+    T strictCast(Object object) throws InvalidTypeException;
 
     default boolean isAssignableTo(Type<?> type) {
         return type.isAssignableFrom(this);
@@ -126,6 +133,18 @@ public interface Type<T extends Comparable<T>> extends Comparator<T> {
         }
 
         @Override
+        public Vector strictCast(Object object) throws InvalidTypeException {
+            if (object instanceof Vector) {
+                Vector v = (Vector) object;
+                if (v.getType().equals(this)) {
+                    return v;
+                }
+            }
+
+            throw new InvalidTypeException(this, object);
+        }
+
+        @Override
         public boolean isAssignableFrom(Type<?> type) {
             return type instanceof VectorType
                     && ((VectorType) type).getDimensions()
@@ -221,6 +240,18 @@ public interface Type<T extends Comparable<T>> extends Comparator<T> {
         }
 
         @Override
+        public Symbol strictCast(Object object) throws InvalidTypeException {
+            if (object instanceof Symbol) {
+                Symbol symbol = (Symbol) object;
+                if (symbol.getType().equals(this)) {
+                    return symbol;
+                }
+            }
+
+            throw new InvalidTypeException(this, object);
+        }
+
+        @Override
         public boolean isAssignableFrom(Type<?> type) {
             return type instanceof SymbolType && this.equals(type);
         }
@@ -249,6 +280,15 @@ public interface Type<T extends Comparable<T>> extends Comparator<T> {
         }
 
         @Override
+        public Integer strictCast(Object object) throws InvalidTypeException {
+            if (object instanceof Integer) {
+                return (Integer) object;
+            } else {
+                throw new InvalidTypeException(this, object);
+            }
+        }
+
+        @Override
         public int compare(Integer o1, Integer o2) {
             return o1.compareTo(o2);
         }
@@ -264,6 +304,15 @@ public interface Type<T extends Comparable<T>> extends Comparator<T> {
         @Override
         public String name() {
             return Boolean.class.getSimpleName();
+        }
+
+        @Override
+        public Boolean strictCast(Object object) throws InvalidTypeException {
+            if (object instanceof Boolean) {
+                return (Boolean) object;
+            } else {
+                throw new InvalidTypeException(this, object);
+            }
         }
 
         @Override

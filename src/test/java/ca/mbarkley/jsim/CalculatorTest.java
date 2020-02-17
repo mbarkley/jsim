@@ -290,9 +290,25 @@ public class CalculatorTest {
     }
 
     @Test
-    public void letExpression() {
+    public void simpleLetExpression() {
         // Want to do modulo operator for this use-case but isn't implemented yet
-        final List<Expression<?>> stmts = parser.parse("let x = 2d6 in x > 10 && x / 2 * 2 = x").getExpressions();
+        final List<Expression<?>> stmts = parser.parse("let x <- 1d4 in x > 2").getExpressions();
+
+        final Map<Boolean, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset));
+    }
+
+    @Test
+    public void complexLetExpression() {
+        // Want to do modulo operator for this use-case but isn't implemented yet
+        final List<Expression<?>> stmts = parser.parse("let x <- 2d6 in x > 10 and x / 2 * 2 = x").getExpressions();
 
         final Map<Boolean, Double> result = stmts.get(0)
                                                  .calculateResults()

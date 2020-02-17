@@ -7,6 +7,6 @@ import java.util.List;
 
 @Value
 public class Evaluation {
-    Context context;
+    LexicalScope context;
     List<Expression<?>> expressions;
 }

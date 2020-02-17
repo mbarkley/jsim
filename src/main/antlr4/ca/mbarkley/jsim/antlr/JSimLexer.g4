@@ -1,7 +1,15 @@
 lexer grammar JSimLexer;
 
-// Lexer rules
 WHITESPACE : (' ' | '\t')+ -> skip;
+
+// Keywords
+DEFINE : 'define';
+
+LET : 'let';
+
+LARROW : '<-';
+
+IN : 'in';
 
 NUMBER : [0-9]+;
 
@@ -56,12 +64,6 @@ fragment H : ('h' | 'H');
 fragment L : ('l' | 'L');
 
 ROLL : NUMBER? D NUMBER ((H|L) NUMBER)?;
-
-DEFINE : 'define';
-
-LET : 'let';
-
-IN : 'in';
 
 IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]*;
 

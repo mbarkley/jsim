@@ -65,6 +65,10 @@ public class EvaluationException extends RuntimeException {
             super(format("Expected type [%s] but observed [%s]", expected.name(), observed.name()));
         }
 
+        public InvalidTypeException(Type<?> expected, Object instance) {
+            super(format("Expected type [%s] but observed [%s]", expected.name(), instance));
+        }
+
         public InvalidTypeException(String message) {
             super(message);
         }

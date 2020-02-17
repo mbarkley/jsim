@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
-import static ca.mbarkley.jsim.model.ExpressionConverter.converters;
+import static ca.mbarkley.jsim.model.ExpressionConverter.coercionConverters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.*;
 
@@ -32,10 +32,10 @@ public class Parser {
     private static final Pattern ROLL = Pattern.compile("(\\d+)?[dD](\\d+)(?:([HhLl])(\\d+))?");
 
     public Evaluation parse(String expression) {
-        return parse(new Context(Map.of()), expression);
+        return parse(new LexicalScope(Map.of()), expression);
     }
 
-    public Evaluation parse(Context evalCtx, String expression) {
+    public Evaluation parse(LexicalScope scope, String expression) {
         final CodePointCharStream is = CharStreams.fromString(expression);
         final JSimLexer lexer = new JSimLexer(is);
         lexer.removeErrorListeners();
@@ -49,7 +49,7 @@ public class Parser {
             throw ctx.exception;
         }
 
-        final StatementVisitor visitor = new StatementVisitor(evalCtx, new ExpressionVisitor());
+        final StatementVisitor visitor = new StatementVisitor(scope, new ExpressionVisitor());
 
         return visitor.visit(ctx);
     }
@@ -70,7 +70,7 @@ public class Parser {
 
     @RequiredArgsConstructor
     private static class StatementVisitor extends JSimParserBaseVisitor<Evaluation> {
-        private final Context initialEvalCtx;
+        private final LexicalScope initialEvalCtx;
         private final ExpressionVisitor expressionVisitor;
 
         @Override
@@ -81,48 +81,48 @@ public class Parser {
                 final Map<String, Expression<?>> definitions = new HashMap<>(initialEvalCtx.getDefinitions());
                 final List<Expression<?>> expressions = new ArrayList<>();
                 for (var stmt : ctx.statement()) {
-                    final Evaluation evaluation = visitStatement(new Context(definitions), stmt);
+                    final Evaluation evaluation = visitStatement(new LexicalScope(definitions), stmt);
                     definitions.putAll(evaluation.getContext().getDefinitions());
                     expressions.addAll(evaluation.getExpressions());
                 }
 
-                return new Evaluation(new Context(definitions), expressions);
+                return new Evaluation(new LexicalScope(definitions), expressions);
             }
         }
 
-        public Evaluation visitStatement(Context evalCtx, JSimParser.StatementContext ctx) {
+        public Evaluation visitStatement(LexicalScope scope, JSimParser.StatementContext ctx) {
             if (ctx.expression() != null) {
-                return new Evaluation(evalCtx, List.of(expressionVisitor.visitExpression(evalCtx, ctx.expression())));
+                return new Evaluation(scope, List.of(expressionVisitor.visitExpression(scope, ctx.expression())));
             } else {
-                return visitDefinition(evalCtx, ctx.definition());
+                return visitDefinition(scope, ctx.definition());
             }
         }
 
-        public Evaluation visitDefinition(Context evalCtx, JSimParser.DefinitionContext ctx) {
+        public Evaluation visitDefinition(LexicalScope scope, JSimParser.DefinitionContext ctx) {
             final String identifier = ctx.IDENTIFIER().getText();
-            final Expression<?> expression = visitDefinitionBody(evalCtx, ctx.definitionBody());
+            final Expression<?> expression = visitDefinitionBody(scope, ctx.definitionBody());
 
-            Map<String, Expression<?>> modifiedDefintions = new HashMap<>(evalCtx.getDefinitions());
+            Map<String, Expression<?>> modifiedDefintions = new HashMap<>(scope.getDefinitions());
             modifiedDefintions.put(identifier, expression);
-            final Context newEvalCtx = new Context(modifiedDefintions);
+            final LexicalScope newEvalCtx = new LexicalScope(modifiedDefintions);
 
             return new Evaluation(newEvalCtx, List.of());
         }
 
-        private Expression<?> visitDefinitionBody(Context evalCtx, JSimParser.DefinitionBodyContext ctx) {
+        private Expression<?> visitDefinitionBody(LexicalScope scope, JSimParser.DefinitionBodyContext ctx) {
             if (ctx.expression() != null) {
-                return expressionVisitor.visitExpression(evalCtx, ctx.expression());
+                return expressionVisitor.visitExpression(scope, ctx.expression());
             } else if (ctx.diceDeclaration() != null) {
-                return visitDiceDeclaration(evalCtx, ctx.diceDeclaration());
+                return visitDiceDeclaration(scope, ctx.diceDeclaration());
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
         }
 
-        private Expression<?> visitDiceDeclaration(Context evalCtx, JSimParser.DiceDeclarationContext ctx) {
+        private Expression<?> visitDiceDeclaration(LexicalScope scope, JSimParser.DiceDeclarationContext ctx) {
             final List<Expression<?>> values = ctx.diceSideDeclaration()
                                                 .stream()
-                                                .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
+                                                .map(subCtx -> visitDiceSideDeclaration(scope, subCtx))
                                                 .collect(toList());
             final Set<Type<?>> types = values.stream()
                                              .map(Expression::getType)
@@ -135,7 +135,7 @@ public class Parser {
                 final List<Expression<?>> newValues =
                         (List) values.stream()
                                      .map(c -> {
-                                         final ExpressionConverter converter = converters.get(new ConverterKey(c.getType().typeClass(), targetType.typeClass()));
+                                         final ExpressionConverter converter = coercionConverters.get(new ConverterKey(c.getType().typeClass(), targetType.typeClass()));
                                          final Expression converted = converter.convert(c, targetType);
 
                                          return converted;
@@ -148,7 +148,12 @@ public class Parser {
 
         private Expression<?> generateEventList(JSimParser.DiceDeclarationContext ctx, Type<?> type, List<Expression<?>> values) {
             final List<Event<?>> events = values.stream()
-                                                .flatMap(Expression::events)
+                                                .peek(exp -> {
+                                                    if (!exp.isConstant()) {
+                                                        throw new IllegalStateException("Can only generate event list for a constant");
+                                                    }
+                                                })
+                                                .flatMap(exp -> exp.events(new RuntimeContext(Map.of())))
                                                 .map(e -> new Event<>(e.getValue(), e.getProbability() / values.size()))
                                                 .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
                                                 .entrySet()
@@ -160,9 +165,9 @@ public class Parser {
             return new EventList(type, events);
         }
 
-        private Expression<?> visitDiceSideDeclaration(Context evalCtx, JSimParser.DiceSideDeclarationContext ctx) {
+        private Expression<?> visitDiceSideDeclaration(LexicalScope scope, JSimParser.DiceSideDeclarationContext ctx) {
             if (ctx.expression() != null) {
-                final Expression<?> expression = expressionVisitor.visitExpression(evalCtx, ctx.expression());
+                final Expression<?> expression = expressionVisitor.visitExpression(scope, ctx.expression());
                 if (expression.isConstant()) {
                     return expression;
                 } else {
@@ -176,33 +181,33 @@ public class Parser {
 
     @RequiredArgsConstructor
     private static class ExpressionVisitor {
-        public Expression<?> visitExpression(Context evalCtx, JSimParser.ExpressionContext ctx) {
+        public Expression<?> visitExpression(LexicalScope scope, JSimParser.ExpressionContext ctx) {
             if (ctx.exception != null) {
                 throw ctx.exception;
             } else if (ctx.literal() != null) {
-                return visitLiteral(evalCtx, ctx.literal());
+                return visitLiteral(scope, ctx.literal());
             } else if (ctx.reference() != null) {
-                return visitReference(evalCtx, ctx.reference());
+                return visitReference(scope, ctx.reference());
             } else if (ctx.multiplicativeTerm() != null) {
-                return visitMultiplicativeTerm(evalCtx, ctx.multiplicativeTerm());
+                return visitMultiplicativeTerm(scope, ctx.multiplicativeTerm());
             } else if (ctx.vectorComponentRestriction() != null) {
-                return visitVectorComponentRestriction(evalCtx, ctx.vectorComponentRestriction());
+                return visitVectorComponentRestriction(scope, ctx.vectorComponentRestriction());
             } else if (ctx.LB() != null && ctx.RB() != null && ctx.expression().size() == 1) {
-                return new Bracketed<>(visitExpression(evalCtx, ctx.expression(0)));
+                return new Bracketed<>(visitExpression(scope, ctx.expression(0)));
             } else if (ctx.expression().size() == 2
                     && ctx.getChildCount() == 3
                     && ctx.getChild(1) instanceof TerminalNode) {
-                return visitBinaryExpression(evalCtx, ctx);
+                return visitBinaryExpression(scope, ctx);
             } else if (ctx.letExpression() != null) {
-                return visitLetExpression(evalCtx, ctx.letExpression());
+                return visitLetExpression(scope, ctx.letExpression());
             } else {
                 throw unsupportedExpression(ctx);
             }
         }
 
-        private Expression<?> visitBinaryExpression(Context evalCtx, JSimParser.ExpressionContext ctx) {
-            final Expression<?> left = visitExpression(evalCtx, ctx.expression(0));
-            final Expression<?> right = visitExpression(evalCtx, ctx.expression(1));
+        private Expression<?> visitBinaryExpression(LexicalScope scope, JSimParser.ExpressionContext ctx) {
+            final Expression<?> left = visitExpression(scope, ctx.expression(0));
+            final Expression<?> right = visitExpression(scope, ctx.expression(1));
             final String operatorSymbol = ctx.getChild(1).getText();
 
             final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
@@ -217,22 +222,26 @@ public class Parser {
             }).orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
         }
 
-        private Expression<?> visitLetExpression(Context evalCtx, JSimParser.LetExpressionContext ctx) {
-            throw new UnsupportedOperationException("Not yet implemented!");
+        private Expression<?> visitLetExpression(LexicalScope scope, JSimParser.LetExpressionContext ctx) {
+            final Expression<?> bindExpression = visitExpression(scope, ctx.expression(0));
+            final String identifier = ctx.IDENTIFIER().getText();
+            final Expression<?> valueExpression = visitExpression(scope.with(identifier, new BoundConstant<>(identifier, bindExpression.getType())), ctx.expression(1));
+
+            return new BindExpression<>(identifier, bindExpression, valueExpression);
         }
 
-        private Expression<?> visitVectorComponentRestriction(Context evalCtx, JSimParser.VectorComponentRestrictionContext ctx) {
+        private Expression<?> visitVectorComponentRestriction(LexicalScope scope, JSimParser.VectorComponentRestrictionContext ctx) {
             final Expression<Vector> vectorExpression;
             final Symbol symbol;
             if (ctx.reference() != null) {
-                final Expression<?> refExpression = visitReference(evalCtx, ctx.reference());
+                final Expression<?> refExpression = visitReference(scope, ctx.reference());
                 if (refExpression.getType().typeClass().equals(Types.VECTOR_TYPE_CLASS)) {
                     vectorExpression = (Expression<Vector>) refExpression;
                 } else {
                     throw new InvalidTypeException(format("Reference [%s] in vector component restriction must be vector type but was [%s]", ctx.reference().getText(), refExpression.getType()));
                 }
             } else if (ctx.vectorLiteral() != null) {
-                vectorExpression = visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+                vectorExpression = visitVectorLiteral(scope, ctx.vectorLiteral());
             } else {
                 throw unsupportedExpression(ctx);
             }
@@ -246,22 +255,22 @@ public class Parser {
             final Type<?> componentType = vectorType.getDimensions().computeIfAbsent(symbol, s -> {
                 throw new IllegalArgumentException(format("Invalid symbol [%s] for vector type [%s]", symbol, vectorType));
             });
-            final List<Event> mapped = vectorExpression.events()
-                                                       .map(e -> new Event(e.getValue()
-                                                                            .getCoordinate(symbol)
-                                                                            .getValue(),
-                                                                           e.getProbability()))
-                                                       .collect(toList());
 
-            return new EventList(componentType, mapped);
+            return mapProjection(vectorExpression, symbol, componentType);
         }
 
-        private Expression<Vector> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {
+        private <T extends Comparable<T>> Expression<T> mapProjection(Expression<Vector> vectorExpression, Symbol symbol, Type<T> componentType) {
+            final ExpressionConverter<Vector, T> converter = ExpressionConverter.projectionConverter(symbol, componentType);
+
+            return converter.convert(vectorExpression, componentType);
+        }
+
+        private Expression<Vector> visitVectorLiteral(LexicalScope scope, JSimParser.VectorLiteralContext ctx) {
             SortedMap<Symbol, Type<?>> typesByDimName = new TreeMap<>();
             SortedMap<Symbol, Constant<?>> coordinate = new TreeMap<>();
             for (var dim : ctx.dimension()) {
                 final Symbol name = Symbol.fromText(dim.SYMBOL().getText());
-                final Constant<?> value = visitDimensionValue(evalCtx, dim.dimensionValue());
+                final Constant<?> value = visitDimensionValue(scope, dim.dimensionValue());
                 typesByDimName.compute(name, (k, v) -> {
                     if (v == null) {
                         return value.getType();
@@ -276,9 +285,9 @@ public class Parser {
             return new Constant<>(vectorType, new Vector(vectorType, coordinate));
         }
 
-        private Constant<?> visitDimensionValue(Context evalCtx, JSimParser.DimensionValueContext ctx) {
+        private Constant<?> visitDimensionValue(LexicalScope scope, JSimParser.DimensionValueContext ctx) {
             if (ctx.IDENTIFIER() != null) {
-                final Expression<?> identifierValue = lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+                final Expression<?> identifierValue = lookupIdentifier(scope, ctx.IDENTIFIER().getText());
                 if (identifierValue instanceof Constant) {
                     return (Constant<?>) identifierValue;
                 } else {
@@ -292,20 +301,25 @@ public class Parser {
             }
         }
 
-        private Expression<?> visitMultiplicativeTerm(Context evalCtx, JSimParser.MultiplicativeTermContext ctx) {
+        private Expression<?> visitMultiplicativeTerm(LexicalScope scope, JSimParser.MultiplicativeTermContext ctx) {
             final Constant<Integer> number = number(ctx.NUMBER());
             final Expression<Vector> expression;
             if (ctx.reference() != null) {
-                final Expression<?> refExpression = visitReference(evalCtx, ctx.reference());
+                final Expression<?> refExpression = visitReference(scope, ctx.reference());
                 if (Types.EMPTY_VECTOR_TYPE.isAssignableFrom(refExpression.getType())) {
                     expression = (Expression<Vector>) refExpression;
                 } else if (Types.SYMBOL_TYPE_CLASS.isInstance(refExpression.getType())) {
-                    expression = symbolToVector((Expression<Symbol>) refExpression);
+                    final ExpressionConverter converter = coercionConverters.get(new ConverterKey(Types.SYMBOL_TYPE_CLASS, Types.VECTOR_TYPE_CLASS));
+                    Type<?> targetType = Types.findCommonType(Set.of(Types.EMPTY_VECTOR_TYPE, refExpression.getType()));
+                    expression = converter.convert(refExpression, targetType);
                 } else {
                     throw unsupportedExpression(ctx.reference());
                 }
             } else if (ctx.SYMBOL() != null) {
-                expression = symbolToVector(symbol(ctx.SYMBOL()));
+                final Expression<Symbol> symbol = symbol(ctx.SYMBOL());
+                final ExpressionConverter converter = coercionConverters.get(new ConverterKey(Types.SYMBOL_TYPE_CLASS, Types.VECTOR_TYPE_CLASS));
+                Type<?> targetType = Types.findCommonType(Set.of(Types.EMPTY_VECTOR_TYPE, symbol.getType()));
+                expression = converter.convert(symbol, targetType);
             } else {
                 throw unsupportedExpression(ctx);
             }
@@ -313,19 +327,19 @@ public class Parser {
             return new MultiplicativeExpression(number.getValue(), expression);
         }
 
-        private Expression<?> visitReference(Context evalCtx, JSimParser.ReferenceContext ctx) {
+        private Expression<?> visitReference(LexicalScope scope, JSimParser.ReferenceContext ctx) {
             if (ctx.IDENTIFIER() != null) {
-                return lookupIdentifier(evalCtx, ctx.IDENTIFIER().getText());
+                return lookupIdentifier(scope, ctx.IDENTIFIER().getText());
             } else {
                 throw unsupportedExpression(ctx);
             }
         }
 
-        private Expression<?> visitLiteral(Context evalCtx, JSimParser.LiteralContext ctx) {
+        private Expression<?> visitLiteral(LexicalScope scope, JSimParser.LiteralContext ctx) {
             if (ctx.booleanLiteral() != null) {
                 return visitBooleanLiteral(ctx.booleanLiteral());
             } else if (ctx.vectorLiteral() != null) {
-                return visitVectorLiteral(evalCtx, ctx.vectorLiteral());
+                return visitVectorLiteral(scope, ctx.vectorLiteral());
             } else if (ctx.NUMBER() != null) {
                 return number(ctx.NUMBER());
             } else if (ctx.ROLL() != null) {
@@ -366,20 +380,6 @@ public class Parser {
         }
     }
 
-    private static Expression<Vector> symbolToVector(final Expression<Symbol> refExpression) {
-        final List<Event<Vector>> vectors = refExpression.events()
-                                                         .map(symbolEvent -> new Event<>(new Vector(new VectorType(new TreeMap<>(Map.of(symbolEvent.getValue(), Types.INTEGER_TYPE))),
-                                                                                                    new TreeMap<>(Map.of(symbolEvent.getValue(), new Constant<>(Types.INTEGER_TYPE, 1)))),
-                                                                                         symbolEvent.getProbability()))
-                                                         .collect(toList());
-        final VectorType type = vectors.stream()
-                                       .map(ev -> ev.getValue().getType())
-                                       .reduce((v1, v2) -> Types.mergeVectorTypes(List.of(v1, v2)))
-                                       .orElse(Types.EMPTY_VECTOR_TYPE);
-
-        return new EventList<>(type, vectors);
-    }
-
     private static Constant<Integer> number(TerminalNode number) {
         return new Constant<>(Types.INTEGER_TYPE, Integer.parseInt(number.getText()));
     }
@@ -393,8 +393,8 @@ public class Parser {
         return new Constant<>(Types.symbolTypeOf(s), s);
     }
 
-    static Expression<?> lookupIdentifier(Context evalCtx, String identifier) {
-        final Expression<?> expression = evalCtx.getDefinitions().get(identifier);
+    static Expression<?> lookupIdentifier(LexicalScope scope, String identifier) {
+        final Expression<?> expression = scope.getDefinitions().get(identifier);
         if (expression != null) {
             return expression;
         } else {

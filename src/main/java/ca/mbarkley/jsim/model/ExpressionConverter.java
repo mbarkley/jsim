@@ -37,9 +37,9 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
     }
 
     public abstract Expression<T> convert(Expression<S> expression, Type<T> targetType);
-    public abstract Type<T> convert(Type<S> source);
+    public abstract Type<?> convert(Type<S> source);
 
-    public static final Map<ConverterKey, ExpressionConverter<?, ?>> converters = Map.of(
+    public static final Map<ConverterKey, ExpressionConverter<?, ?>> coercionConverters = Map.of(
             new ConverterKey(SYMBOL_TYPE_CLASS, VECTOR_TYPE_CLASS), new SymbolToVectorExpressionConverter(),
 
             new ConverterKey(SYMBOL_TYPE_CLASS, SYMBOL_TYPE_CLASS), new IdentityConverter<>(),
@@ -47,6 +47,42 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
             new ConverterKey(INTEGER_TYPE_CLASS, INTEGER_TYPE_CLASS), new IdentityConverter<>(),
             new ConverterKey(BOOLEAN_TYPE_CLASS, BOOLEAN_TYPE_CLASS), new IdentityConverter<>()
     );
+
+    public static <T extends Comparable<T>> ExpressionConverter<Vector, T> projectionConverter(Symbol symbol, Type<T> componentType) {
+        return new VectorProjectionExpressionConverter<>(symbol, componentType);
+    }
+
+    @Value
+    private static class VectorProjectionValueConverter<T extends Comparable<T>> implements ValueConverter<Vector, T> {
+        Symbol symbol;
+        Type<T> componentType;
+
+        @Override
+        public T convert(Vector value) {
+            return componentType.strictCast(value.getCoordinate(symbol).getValue());
+        }
+
+        @Override
+        public Type<T> getTargetType() {
+            return componentType;
+        }
+    }
+
+    @Value
+    private static class VectorProjectionExpressionConverter<T extends Comparable<T>> extends ExpressionConverter<Vector, T> {
+        Symbol symbol;
+        Type<T> componentType;
+
+        @Override
+        public Expression<T> convert(Expression<Vector> expression, Type<T> targetType) {
+            return new MappedExpression<>(expression, new VectorProjectionValueConverter<>(symbol, componentType));
+        }
+
+        @Override
+        public Type<T> convert(Type<Vector> source) {
+            return componentType;
+        }
+    }
 
     @Value
     private static class VectorToVectorValueConverter implements ValueConverter<Vector, Vector> {
@@ -86,7 +122,7 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
         }
 
         @Override
-        public Type<Vector> convert(Type<Vector> source) {
+        public Type<?> convert(Type<Vector> source) {
             return source;
         }
     }
@@ -118,7 +154,7 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
         }
 
         @Override
-        public Type<Vector> convert(Type<Symbol> source) {
+        public Type<?> convert(Type<Symbol> source) {
             final Symbol symbol = ((Type.SymbolType) source).getSymbol();
             return Types.vectorTypeOf(Map.of(symbol, INTEGER_TYPE));
         }
@@ -131,7 +167,7 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
         }
 
         @Override
-        public Type<T> convert(Type<T> source) {
+        public Type<?> convert(Type<T> source) {
             return source;
         }
     }

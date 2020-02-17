@@ -1,6 +1,7 @@
 package ca.mbarkley.jsim.cli;
 
 import ca.mbarkley.jsim.eval.Parser;
+import ca.mbarkley.jsim.eval.RuntimeContext;
 import ca.mbarkley.jsim.model.Expression;
 import org.antlr.v4.runtime.RecognitionException;
 import org.apache.commons.io.IOUtils;
@@ -8,6 +9,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 
 public class BatchProcessor {
     private final int desiredWidth;
@@ -25,7 +27,7 @@ public class BatchProcessor {
             final List<Expression<?>> stmts = parser.parse(input).getExpressions();
             for (var stmt : stmts) {
                 final String cleanInput = stmt.toString();
-                final String sortedHistogram = displayer.createSortedHistogram(cleanInput, stmt.events());
+                final String sortedHistogram = displayer.createSortedHistogram(cleanInput, stmt.events(new RuntimeContext(Map.of())));
 
                 System.out.print(sortedHistogram);
             }

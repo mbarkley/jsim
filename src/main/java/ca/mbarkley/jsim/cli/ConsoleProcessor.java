@@ -27,10 +27,10 @@ public class ConsoleProcessor {
                 break;
             } else {
                 try {
-                    final Evaluation eval = parser.parse(new Context(definitions), line);
+                    final Evaluation eval = parser.parse(new LexicalScope(definitions), line);
                     definitions.putAll(eval.getContext().getDefinitions());
                     for (var expression : eval.getExpressions()) {
-                        final String sortedHistogram = displayer.createSortedHistogram(expression.toString(), expression.events());
+                        final String sortedHistogram = displayer.createSortedHistogram(expression.toString(), expression.events(new RuntimeContext(Map.of())));
                         console.printf("%s", sortedHistogram);
                     }
                 } catch (RecognitionException re) {

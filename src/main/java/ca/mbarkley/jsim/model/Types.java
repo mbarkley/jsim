@@ -8,7 +8,7 @@ import ca.mbarkley.jsim.model.Type.VectorType;
 
 import java.util.*;
 
-import static ca.mbarkley.jsim.model.ExpressionConverter.converters;
+import static ca.mbarkley.jsim.model.ExpressionConverter.coercionConverters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -61,11 +61,11 @@ public abstract class Types {
     public static Type<?> findCommonType(Set<? extends Type<?>> types) throws EvaluationException {
         if (types.size() > 1) {
             final Set<? extends TypeClass<?>> targets = types.stream()
-                                                             .map(type -> converters.keySet()
-                                                                                    .stream()
-                                                                                    .filter(key -> key.getSource().isInstance(type))
-                                                                                    .map(ConverterKey::getTarget)
-                                                                                    .collect(toSet()))
+                                                             .map(type -> coercionConverters.keySet()
+                                                                                            .stream()
+                                                                                            .filter(key -> key.getSource().isInstance(type))
+                                                                                            .map(ConverterKey::getTarget)
+                                                                                            .collect(toSet()))
                                                              .reduce((left, right) -> left.stream()
                                                                                           .filter(right::contains)
                                                                                           .collect(toSet()))
@@ -76,7 +76,7 @@ public abstract class Types {
                                                          final List<Type> convertedTypes = types.stream()
                                                                                                 .map(type -> {
                                                                                                     final ConverterKey key = new ConverterKey(type.typeClass(), targetTypeClass);
-                                                                                                    final ExpressionConverter<?, ?> converter = converters.get(key);
+                                                                                                    final ExpressionConverter<?, ?> converter = coercionConverters.get(key);
 
                                                                                                     return converter.convert((Type) type);
                                                                                                 })
@@ -101,7 +101,7 @@ public abstract class Types {
     private Types() {}
 
     public static Expression<?> convertExpression(Expression<?> expression, Type<?> commonType) {
-        final ExpressionConverter converter = converters.get(new ConverterKey(expression.getType().typeClass(), commonType.typeClass()));
+        final ExpressionConverter converter = coercionConverters.get(new ConverterKey(expression.getType().typeClass(), commonType.typeClass()));
         return converter.convert(expression, commonType);
     }
 }

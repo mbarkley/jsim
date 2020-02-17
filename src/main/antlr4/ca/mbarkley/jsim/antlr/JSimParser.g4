@@ -55,7 +55,7 @@ literal
     ;
 
 letExpression
-    : LET IDENTIFIER EQ expression IN expression
+    : LET IDENTIFIER LARROW expression IN expression
     ;
 
 vectorComponentRestriction

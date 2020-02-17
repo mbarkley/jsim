@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
-import static java.lang.String.format;
 import static java.util.Comparator.*;
 import static java.util.stream.Collectors.toList;
 
