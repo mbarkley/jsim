@@ -5,59 +5,104 @@ options {
 }
 
 // Grammar rules
-jsim : statement? (TERMINATOR+ statement)* TERMINATOR* EOF;
+jsim
+    : statement? (TERMINATOR+ statement)* TERMINATOR* EOF
+    ;
 
-statement : expression | definition;
+statement
+    : expression
+    | definition
+    ;
 
-definition : DEFINE IDENTIFIER EQ definitionBody;
+definition
+    : DEFINE IDENTIFIER EQ definitionBody
+    ;
 
-definitionBody : expression |
-                 diceDeclaration;
+definitionBody
+    : expression
+    | diceDeclaration
+    ;
 
-diceDeclaration : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB;
+diceDeclaration
+    : LSB diceSideDeclaration (COMMA diceSideDeclaration)* RSB
+    ;
 
-diceSideDeclaration : expression;
+diceSideDeclaration
+    : expression
+    ;
 
-expression : arithmeticExpression |
-             booleanExpression;
+expression
+    : arithmeticExpression
+    | booleanExpression
+    ;
 
-booleanExpression : LB booleanExpression RB |
-                    booleanExpression AND booleanExpression |
-                    booleanExpression OR booleanExpression |
-                    arithmeticExpression EQ arithmeticExpression |
-                    booleanExpression EQ booleanExpression |
-                    arithmeticComparison |
-                    booleanLiteral |
-                    reference |
-                    letExpression;
+booleanExpression
+    : LB booleanExpression RB
+    | booleanExpression AND booleanExpression
+    | booleanExpression OR booleanExpression
+    | arithmeticExpression EQ arithmeticExpression
+    | booleanExpression EQ booleanExpression
+    | arithmeticComparison
+    | booleanLiteral
+    | reference
+    | letExpression
+    ;
 
-arithmeticComparison : arithmeticExpression LT arithmeticExpression |
-                       arithmeticExpression GT arithmeticExpression;
+arithmeticComparison
+    : arithmeticExpression LT arithmeticExpression
+    | arithmeticExpression GT arithmeticExpression
+    ;
 
-arithmeticExpression : LB arithmeticExpression RB |
-                       arithmeticExpression DIVIDE arithmeticExpression |
-                       arithmeticExpression TIMES arithmeticExpression |
-                       arithmeticExpression (PLUS|MINUS) arithmeticExpression |
-                       multiplicativeTerm |
-                       arithmeticLiteral |
-                       reference |
-                       vectorComponentRestriction |
-                       letExpression;
+arithmeticExpression
+    : LB arithmeticExpression RB
+    | arithmeticExpression DIVIDE arithmeticExpression
+    | arithmeticExpression TIMES arithmeticExpression
+    | arithmeticExpression (PLUS|MINUS) arithmeticExpression
+    | multiplicativeTerm
+    | arithmeticLiteral
+    | reference
+    | vectorComponentRestriction
+    | letExpression
+    ;
 
-letExpression : LET IDENTIFIER EQ expression IN expression;
+letExpression
+    : LET IDENTIFIER EQ expression IN expression
+    ;
 
-vectorComponentRestriction: (reference | vectorLiteral) LCB SYMBOL RCB;
+vectorComponentRestriction
+    : (reference
+    | vectorLiteral) LCB SYMBOL RCB
+    ;
 
-multiplicativeTerm: NUMBER (reference | SYMBOL);
+multiplicativeTerm
+    : NUMBER (reference | SYMBOL)
+    ;
 
-reference: IDENTIFIER;
+reference
+    : IDENTIFIER
+    ;
 
-arithmeticLiteral : NUMBER | ROLL | vectorLiteral | SYMBOL;
+arithmeticLiteral
+    : NUMBER
+    | ROLL
+    | vectorLiteral
+    | SYMBOL
+    ;
 
-booleanLiteral : TRUE | FALSE;
+booleanLiteral
+    : TRUE
+    | FALSE
+    ;
 
-vectorLiteral : LCB dimension (COMMA dimension)* RCB;
+vectorLiteral
+    : LCB dimension (COMMA dimension)* RCB
+    ;
 
-dimension : SYMBOL COLON dimensionValue;
+dimension
+    : SYMBOL COLON dimensionValue
+    ;
 
-dimensionValue : IDENTIFIER | NUMBER;
+dimensionValue
+    : IDENTIFIER
+    | NUMBER
+    ;
