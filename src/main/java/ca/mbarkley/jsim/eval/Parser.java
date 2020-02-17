@@ -100,7 +100,7 @@ public class Parser {
 
         public Evaluation visitDefinition(LexicalScope scope, JSimParser.DefinitionContext ctx) {
             final String identifier = ctx.IDENTIFIER().getText();
-            final Expression<?> expression = visitDefinitionBody(scope, ctx.definitionBody());
+            final Expression<?> expression = visitDefinitionBody(scope, ctx.definitionBody(), identifier);
 
             Map<String, Expression<?>> modifiedDefintions = new HashMap<>(scope.getDefinitions());
             modifiedDefintions.put(identifier, expression);
@@ -109,17 +109,17 @@ public class Parser {
             return new Evaluation(newEvalCtx, List.of());
         }
 
-        private Expression<?> visitDefinitionBody(LexicalScope scope, JSimParser.DefinitionBodyContext ctx) {
+        private Expression<?> visitDefinitionBody(LexicalScope scope, JSimParser.DefinitionBodyContext ctx, String identifier) {
             if (ctx.expression() != null) {
                 return expressionVisitor.visitExpression(scope, ctx.expression());
             } else if (ctx.diceDeclaration() != null) {
-                return visitDiceDeclaration(scope, ctx.diceDeclaration());
+                return visitDiceDeclaration(scope, ctx.diceDeclaration(), identifier);
             } else {
                 throw new IllegalStateException(ctx.getText());
             }
         }
 
-        private Expression<?> visitDiceDeclaration(LexicalScope scope, JSimParser.DiceDeclarationContext ctx) {
+        private Expression<?> visitDiceDeclaration(LexicalScope scope, JSimParser.DiceDeclarationContext ctx, String identifier) {
             final List<Expression<?>> values = ctx.diceSideDeclaration()
                                                 .stream()
                                                 .map(subCtx -> visitDiceSideDeclaration(scope, subCtx))
@@ -142,11 +142,11 @@ public class Parser {
                                      })
                                      .collect(toList());
 
-                return generateEventList(ctx, targetType, newValues);
+                return createCustomDie(ctx, identifier, targetType, newValues);
             }
         }
 
-        private Expression<?> generateEventList(JSimParser.DiceDeclarationContext ctx, Type<?> type, List<Expression<?>> values) {
+        private Expression<?> createCustomDie(JSimParser.DiceDeclarationContext ctx, String identifier, Type<?> type, List<Expression<?>> values) {
             final List<Event<?>> events = values.stream()
                                                 .peek(exp -> {
                                                     if (!exp.isConstant()) {
@@ -162,7 +162,7 @@ public class Parser {
                                                 .collect(toList());
 
             //noinspection unchecked,rawtypes
-            return new EventList(type, events);
+            return new CustomDie(identifier, type, events);
         }
 
         private Expression<?> visitDiceSideDeclaration(LexicalScope scope, JSimParser.DiceSideDeclarationContext ctx) {
