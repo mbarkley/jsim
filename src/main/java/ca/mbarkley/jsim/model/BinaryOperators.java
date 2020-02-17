@@ -34,13 +34,14 @@ public abstract class BinaryOperators {
                     return (Optional) Optional.of(division);
                 }
                 break;
-            case "+":
+            case "+": {
                 if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
                     return (Optional) Optional.of(intAddition);
                 } else if (Types.EMPTY_VECTOR_TYPE.isAssignableTo(left) && Types.EMPTY_VECTOR_TYPE.isAssignableTo(right)) {
                     return (Optional) Optional.of(new VectorBinaryOperation(symbol));
                 }
                 break;
+            }
             case "-":
                 if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
                     return (Optional) Optional.of(intSubtraction);

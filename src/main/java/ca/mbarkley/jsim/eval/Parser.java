@@ -3,7 +3,6 @@ package ca.mbarkley.jsim.eval;
 import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
-import ca.mbarkley.jsim.eval.EvaluationException.UnknownOperatorException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
@@ -23,7 +22,6 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
 import static ca.mbarkley.jsim.model.Converter.converters;
@@ -231,15 +229,8 @@ public class Parser {
                     return new ComparisonExpression(left, BinaryOperator.strictEquality(), right);
                 } else {
                     final Type<?> commonType = Types.findCommonType(Set.of(left.getType(), right.getType()));
-                    final Converter leftConverter = converters.get(new ConverterKey(left.getType().typeClass(), commonType.typeClass()));
-                    final Converter rightConverter = converters.get(new ConverterKey(right.getType().typeClass(), commonType.typeClass()));
-
-                    final Expression<?> newLeft = new EventList(commonType, left.events()
-                                                                                .map(e -> new Event(leftConverter.convert(e.getValue(), commonType), e.getProbability()))
-                                                                                .collect(toList()));
-                    final Expression<?> newRight = new EventList(commonType, right.events()
-                                                                                  .map(e -> new Event(rightConverter.convert(e.getValue(), commonType), e.getProbability()))
-                                                                                  .collect(toList()));
+                    final Expression<?> newLeft = Types.convertExpression(left, commonType);
+                    final Expression<?> newRight = Types.convertExpression(right, commonType);
 
                     return new ComparisonExpression(newLeft, BinaryOperator.strictEquality(), newRight);
                 }
@@ -378,10 +369,19 @@ public class Parser {
             final Expression<?> left = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
             final Expression<?> right = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
             final String operatorSymbol = ctx.getChild(1).getText();
-            final BinaryOperator<?, ?> sign = lookupBinaryOp(left.getType(), right.getType(), operatorSymbol)
-                    .orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
+            final Optional<? extends BinaryOperator<?, ?>> foundSign = lookupBinaryOp(left.getType(), right.getType(), operatorSymbol);
+            if (foundSign.isPresent()) {
+                return new BinaryOpExpression(left, foundSign.get(), right);
+            } else {
+                final Type<?> commonType = Types.findCommonType(Set.of(left.getType(), right.getType()));
+                final BinaryOperator<?, ?> sign = lookupBinaryOp(commonType, commonType, operatorSymbol)
+                        .orElseThrow(() -> new EvaluationException.UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
+                final Expression<?> newLeft = Types.convertExpression(left, commonType);
+                final Expression<?> newRight = Types.convertExpression(right, commonType);
 
-            return new BinaryOpExpression(left, sign, right);
+                return new BinaryOpExpression(newLeft, sign, newRight);
+            }
+
         }
 
         private Constant<?> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {

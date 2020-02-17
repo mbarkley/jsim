@@ -51,4 +51,8 @@ public class Symbol implements Comparable<Symbol> {
             this.symbol = symbol;
         }
     }
+
+    public static Symbol of(String value) {
+        return new Symbol(Mark.TICK, value);
+    }
 }

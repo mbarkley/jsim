@@ -102,6 +102,24 @@ public class VectorTest {
     }
 
     @Test
+    public void multipleCoinFlipComparison() {
+        final Evaluation eval = parser.parse("define coin = ['H, 'T]; coin + coin = 'H + 'T");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                               .get(0)
+                                               .calculateResults()
+                                               .entrySet()
+                                               .stream()
+                                               .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        assertThat(result.entrySet()).containsExactlyInAnyOrder(
+                Map.entry(true, 1.0/2.0),
+                Map.entry(false, 1.0/2.0)
+        );
+    }
+
+    @Test
     public void propertyAccessTest() {
         final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test['v]");
 

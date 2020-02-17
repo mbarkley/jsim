@@ -4,6 +4,7 @@ import ca.mbarkley.jsim.eval.EvaluationException;
 import ca.mbarkley.jsim.model.Converter.ConverterKey;
 import ca.mbarkley.jsim.model.Type.TypeClass;
 import ca.mbarkley.jsim.model.Type.VectorType;
+import ca.mbarkley.jsim.prob.Event;
 
 import java.util.*;
 
@@ -89,4 +90,11 @@ public abstract class Types {
     }
 
     private Types() {}
+
+    public static Expression<?> convertExpression(Expression<?> left, Type<?> commonType) {
+        final Converter leftConverter = converters.get(new ConverterKey(left.getType().typeClass(), commonType.typeClass()));
+        return (Expression<?>) new Expression.EventList(commonType, left.events()
+                                                                        .map(e -> new Event(leftConverter.convert(e.getValue(), commonType), e.getProbability()))
+                                                                        .collect(toList()));
+    }
 }
