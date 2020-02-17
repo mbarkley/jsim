@@ -323,7 +323,6 @@ public class CalculatorTest {
 
     @Test
     public void imperialAssaultTest() {
-        // Want to do modulo operator for this use-case but isn't implemented yet
         final List<Expression<?>> stmts = parser.parse("define green = ['s+'r,'s+'d+'r,2'd+'r,'s+'d+2'r,2'd+2'r,2'd+3'r]; let r <- green + green in r{'r} > 2 and r{'d} > 0").getExpressions();
 
         final Map<Boolean, Double> result = stmts.get(0)
