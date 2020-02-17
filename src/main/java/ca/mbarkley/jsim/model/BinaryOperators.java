@@ -5,11 +5,9 @@ import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
 import ca.mbarkley.jsim.model.Expression.Constant;
 import ca.mbarkley.jsim.model.Type.VectorType;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
+import static ca.mbarkley.jsim.model.Types.VECTOR_TYPE_CLASS;
 import static ca.mbarkley.jsim.model.Types.mergeVectorTypes;
 import static java.lang.String.format;
 
@@ -23,35 +21,33 @@ public abstract class BinaryOperators {
 
     @SuppressWarnings("unchecked")
     public static <T extends Comparable<T>> Optional<? extends BinaryOperator<T, T>> lookupBinaryOp(Type<?> left, Type<?> right, String symbol) {
-        switch (symbol) {
-            case "*":
-                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
-                    return (Optional) Optional.of(multiplication);
-                }
-                break;
-            case "/":
-                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
-                    return (Optional) Optional.of(division);
-                }
-                break;
-            case "+": {
-                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
-                    return (Optional) Optional.of(intAddition);
-                } else if (Types.EMPTY_VECTOR_TYPE.isAssignableTo(left) && Types.EMPTY_VECTOR_TYPE.isAssignableTo(right)) {
-                    return (Optional) Optional.of(new VectorBinaryOperation(symbol));
-                }
-                break;
-            }
-            case "-":
-                if (Types.INTEGER_TYPE.isAssignableFrom(left) && Types.INTEGER_TYPE.isAssignableFrom(right)) {
-                    return (Optional) Optional.of(intSubtraction);
-                } else if (left.isAssignableFrom(Types.EMPTY_VECTOR_TYPE) && right.isAssignableFrom(Types.EMPTY_VECTOR_TYPE)) {
-                    return (Optional) Optional.of(new VectorBinaryOperation(symbol));
-                }
-                break;
-        }
+        final Optional<Type<?>> foundOperandType = Types.findCommonType(left, right);
 
-        return Optional.empty();
+        return foundOperandType.flatMap(operandType -> {
+            switch (symbol) {
+                case "*":
+                    if (Types.INTEGER_TYPE.equals(operandType)) {
+                        return (Optional) Optional.of(multiplication);
+                    }
+                    break;
+                case "/":
+                    if (Types.INTEGER_TYPE.equals(operandType)) {
+                        return (Optional) Optional.of(division);
+                    }
+                    break;
+                case "+":
+                case "-":
+                    if (Types.INTEGER_TYPE.equals(operandType)) {
+                        return (Optional) Optional.of(symbol.equals("+") ? intAddition : intSubtraction);
+                    } else if (VECTOR_TYPE_CLASS.equals(operandType.typeClass())) {
+                        return (Optional) Optional.of(new VectorBinaryOperation(symbol));
+                    }
+                    break;
+            }
+
+            return Optional.empty();
+        });
+
     }
 
     private static class VectorBinaryOperation implements BinaryOperator<Vector, Vector> {

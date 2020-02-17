@@ -1,14 +1,14 @@
 package ca.mbarkley.jsim.model;
 
 import ca.mbarkley.jsim.eval.EvaluationException;
-import ca.mbarkley.jsim.model.Converter.ConverterKey;
+import ca.mbarkley.jsim.eval.EvaluationException.TypeUnificationException;
+import ca.mbarkley.jsim.model.ExpressionConverter.ConverterKey;
 import ca.mbarkley.jsim.model.Type.TypeClass;
 import ca.mbarkley.jsim.model.Type.VectorType;
-import ca.mbarkley.jsim.prob.Event;
 
 import java.util.*;
 
-import static ca.mbarkley.jsim.model.Converter.converters;
+import static ca.mbarkley.jsim.model.ExpressionConverter.converters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -49,6 +49,15 @@ public abstract class Types {
         return new VectorType(dimensionSuperset);
     }
 
+    public static Optional<Type<?>> findCommonType(Type<?>... types) {
+        final Set<Type<?>> typeSet = new HashSet<>(List.of(types));
+        try {
+            return Optional.of(findCommonType(typeSet));
+        } catch (TypeUnificationException tue) {
+            return Optional.empty();
+        }
+    }
+
     public static Type<?> findCommonType(Set<? extends Type<?>> types) throws EvaluationException {
         if (types.size() > 1) {
             final Set<? extends TypeClass<?>> targets = types.stream()
@@ -67,7 +76,7 @@ public abstract class Types {
                                                          final List<Type> convertedTypes = types.stream()
                                                                                                 .map(type -> {
                                                                                                     final ConverterKey key = new ConverterKey(type.typeClass(), targetTypeClass);
-                                                                                                    final Converter<?, ?> converter = converters.get(key);
+                                                                                                    final ExpressionConverter<?, ?> converter = converters.get(key);
 
                                                                                                     return converter.convert((Type) type);
                                                                                                 })
@@ -82,7 +91,7 @@ public abstract class Types {
             if (viableTargets.size() == 1) {
                 return viableTargets.iterator().next();
             } else {
-                throw new EvaluationException.TypeUnificationException(types, viableTargets);
+                throw new TypeUnificationException(types, viableTargets);
             }
         } else {
             return types.iterator().next();
@@ -91,10 +100,8 @@ public abstract class Types {
 
     private Types() {}
 
-    public static Expression<?> convertExpression(Expression<?> left, Type<?> commonType) {
-        final Converter leftConverter = converters.get(new ConverterKey(left.getType().typeClass(), commonType.typeClass()));
-        return (Expression<?>) new Expression.EventList(commonType, left.events()
-                                                                        .map(e -> new Event(leftConverter.convert(e.getValue(), commonType), e.getProbability()))
-                                                                        .collect(toList()));
+    public static Expression<?> convertExpression(Expression<?> expression, Type<?> commonType) {
+        final ExpressionConverter converter = converters.get(new ConverterKey(expression.getType().typeClass(), commonType.typeClass()));
+        return converter.convert(expression, commonType);
     }
 }

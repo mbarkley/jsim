@@ -1,5 +1,6 @@
 package ca.mbarkley.jsim.model;
 
+import ca.mbarkley.jsim.model.ExpressionConverter.ValueConverter;
 import ca.mbarkley.jsim.prob.Event;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -99,6 +100,31 @@ public abstract class Expression<T extends Comparable<T>> {
         @Override
         public String toString() {
             return "" + value;
+        }
+    }
+
+    @Value
+    @EqualsAndHashCode(callSuper = false)
+    public static class MappedExpression<S extends Comparable<S>, T extends Comparable<T>> extends Expression<T> {
+        Expression<S> expression;
+        ValueConverter<S, T> mapper;
+
+        @Override
+        public Stream<Event<T>> events() {
+            return expression.events()
+                             .map(e -> new Event<>(mapper.convert(e.getValue()), e.getProbability()));
+        }
+
+        @Override
+        public Type<T> getType() {
+            return mapper.getTargetType();
+        }
+
+        @Override
+        public String toString() {
+            final String[] stringifedValues = events().map(event -> format("%s (%s)", event.getValue(), formatAsPercentage(event.getProbability())))
+                                                      .toArray(String[]::new);
+            return format("[%s]", String.join(", ", stringifedValues));
         }
     }
 

@@ -120,6 +120,24 @@ public class VectorTest {
     }
 
     @Test
+    public void multipleCoinFlipComparisonWithSingleSymbol() {
+        final Evaluation eval = parser.parse("define coin = ['H, 'T]; coin + coin = 2'H");
+
+        assertThat(eval.getExpressions()).hasSize(1);
+        final Map<Boolean, Double> result = eval.getExpressions()
+                                                .get(0)
+                                                .calculateResults()
+                                                .entrySet()
+                                                .stream()
+                                                .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        assertThat(result.entrySet()).containsExactlyInAnyOrder(
+                Map.entry(true, 1.0/4.0),
+                Map.entry(false, 3.0/4.0)
+        );
+    }
+
+    @Test
     public void propertyAccessTest() {
         final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test{'v}");
 

@@ -4,11 +4,12 @@ import ca.mbarkley.jsim.antlr.JSimLexer;
 import ca.mbarkley.jsim.antlr.JSimParser;
 import ca.mbarkley.jsim.antlr.JSimParserBaseVisitor;
 import ca.mbarkley.jsim.eval.EvaluationException.InvalidTypeException;
+import ca.mbarkley.jsim.eval.EvaluationException.UnknownOperatorException;
 import ca.mbarkley.jsim.model.*;
 import ca.mbarkley.jsim.model.BooleanExpression.BooleanOperators;
 import ca.mbarkley.jsim.model.BooleanExpression.IntegerComparisons;
-import ca.mbarkley.jsim.model.Converter.ConverterKey;
 import ca.mbarkley.jsim.model.Expression.*;
+import ca.mbarkley.jsim.model.ExpressionConverter.ConverterKey;
 import ca.mbarkley.jsim.model.IntegerExpression.HighDice;
 import ca.mbarkley.jsim.model.IntegerExpression.HomogeneousDicePool;
 import ca.mbarkley.jsim.model.IntegerExpression.LowDice;
@@ -23,10 +24,9 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static ca.mbarkley.jsim.model.BinaryOperators.lookupBinaryOp;
-import static ca.mbarkley.jsim.model.Converter.converters;
+import static ca.mbarkley.jsim.model.ExpressionConverter.converters;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.*;
 
@@ -129,20 +129,20 @@ public class Parser {
                                                 .map(subCtx -> visitDiceSideDeclaration(evalCtx, subCtx))
                                                 .collect(toList());
             final Set<Type<?>> types = values.stream()
-                                                       .map(Constant::getType)
-                                                       .collect(toSet());
+                                             .map(Constant::getType)
+                                             .collect(toSet());
 
             if (values.isEmpty()) {
                 throw new IllegalStateException("Cannot have empty dice declaration");
             } else {
                 final Type<?> targetType = Types.findCommonType(types);
-                final List<Constant<?>> newValues =
+                final List<Expression<?>> newValues =
                         (List) values.stream()
                                      .map(c -> {
-                                         final Converter converter = converters.get(new ConverterKey(c.getType().typeClass(), targetType.typeClass()));
-                                         final Comparable converted = converter.convert(c.getValue(), targetType);
+                                         final ExpressionConverter converter = converters.get(new ConverterKey(c.getType().typeClass(), targetType.typeClass()));
+                                         final Expression converted = converter.convert(c, targetType);
 
-                                         return new Constant(targetType, converted);
+                                         return converted;
                                      })
                                      .collect(toList());
 
@@ -150,11 +150,10 @@ public class Parser {
             }
         }
 
-        private Expression<?> generateEventList(JSimParser.DiceDeclarationContext ctx, Type<?> type, List<Constant<?>> values) {
-            final double prob = 1.0 / (double) ctx.diceSideDeclaration().size();
+        private Expression<?> generateEventList(JSimParser.DiceDeclarationContext ctx, Type<?> type, List<Expression<?>> values) {
             final List<Event<?>> events = values.stream()
-                                                .map(Constant::getValue)
-                                                .map(v -> new Event<>(v, prob))
+                                                .flatMap(Expression::events)
+                                                .map(e -> new Event<>(e.getValue(), e.getProbability() / values.size()))
                                                 .collect(groupingBy(Event::getValue, reducing(0.0, Event::getProbability, Double::sum)))
                                                 .entrySet()
                                                 .stream()
@@ -227,15 +226,14 @@ public class Parser {
                 final Expression<?> left = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
                 final Expression<?> right = arithmeticExpressionVisitor.visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
 
-                if (left.getType().typeClass().equals(right.getType().typeClass())) {
-                    return new ComparisonExpression(left, BinaryOperator.strictEquality(), right);
-                } else {
-                    final Type<?> commonType = Types.findCommonType(Set.of(left.getType(), right.getType()));
+                final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
+
+                return foundCommonType.map(commonType -> {
                     final Expression<?> newLeft = Types.convertExpression(left, commonType);
                     final Expression<?> newRight = Types.convertExpression(right, commonType);
 
                     return new ComparisonExpression(newLeft, BinaryOperator.strictEquality(), newRight);
-                }
+                }).orElseThrow(() -> new UnknownOperatorException(left.getType(), ctx.EQ().getText(), right.getType()));
             } else if (ctx.booleanExpression().size() == 1) {
                 return new Bracketed<>(visitBooleanExpression(evalCtx, ctx.booleanExpression(0)));
             } else if (ctx.arithmeticComparison() != null) {
@@ -408,19 +406,17 @@ public class Parser {
             final Expression<?> left = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(0));
             final Expression<?> right = visitArithmeticExpression(evalCtx, ctx.arithmeticExpression(1));
             final String operatorSymbol = ctx.getChild(1).getText();
-            final Optional<? extends BinaryOperator<?, ?>> foundSign = lookupBinaryOp(left.getType(), right.getType(), operatorSymbol);
-            if (foundSign.isPresent()) {
-                return new BinaryOpExpression(left, foundSign.get(), right);
-            } else {
-                final Type<?> commonType = Types.findCommonType(Set.of(left.getType(), right.getType()));
+
+            final Optional<Type<?>> foundCommonType = Types.findCommonType(left.getType(), right.getType());
+
+            return foundCommonType.map(commonType -> {
                 final BinaryOperator<?, ?> sign = lookupBinaryOp(commonType, commonType, operatorSymbol)
-                        .orElseThrow(() -> new EvaluationException.UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
+                        .orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
                 final Expression<?> newLeft = Types.convertExpression(left, commonType);
                 final Expression<?> newRight = Types.convertExpression(right, commonType);
 
                 return new BinaryOpExpression(newLeft, sign, newRight);
-            }
-
+            }).orElseThrow(() -> new UnknownOperatorException(left.getType(), operatorSymbol, right.getType()));
         }
 
         private Constant<Vector> visitVectorLiteral(Context evalCtx, JSimParser.VectorLiteralContext ctx) {

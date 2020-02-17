@@ -9,9 +9,6 @@ import java.util.function.BiFunction;
 public interface BinaryOperator<I extends Comparable<I>, O extends Comparable<O>> extends HasSymbol<BinaryOperator<I, O>> {
     O evaluate(I left, I right);
     Type<O> getOutputType(Type<I> leftType, Type<I> rightType);
-    default Type<O> unsafeGetOuptutType(Type<?> left, Type<?> right) {
-        return getOutputType((Type) left, (Type) right);
-    }
 
     static <T extends Comparable<T>> BinaryOperator<T, Boolean> strictEquality() {
         return new StrictEquality<>();
