@@ -190,7 +190,7 @@ public class Parser {
                 return visitReference(scope, ctx.reference());
             } else if (ctx.multiplicativeTerm() != null) {
                 return visitMultiplicativeTerm(scope, ctx.multiplicativeTerm());
-            } else if (ctx.expression().size() == 1 && ctx.LCB() != null && ctx.RCB() != null && ctx.SYMBOL() != null) {
+            } else if (ctx.expression().size() == 1 && ctx.LSB() != null && ctx.RSB() != null && ctx.SYMBOL() != null) {
                 return visitVectorComponentRestriction(scope, ctx);
             } else if (ctx.LB() != null && ctx.RB() != null && ctx.expression().size() == 1) {
                 return new Bracketed<>(visitExpression(scope, ctx.expression(0)));

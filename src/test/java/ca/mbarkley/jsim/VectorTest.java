@@ -139,7 +139,7 @@ public class VectorTest {
 
     @Test
     public void propertyAccessTest() {
-        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test{'v}");
+        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; test['v]");
 
         assertThat(eval.getExpressions()).hasSize(1);
         final Map<Integer, Double> result = eval.getExpressions()
@@ -154,7 +154,7 @@ public class VectorTest {
 
     @Test
     public void indirectPropertyAccessTest() {
-        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; (test + {}){'v}");
+        final Evaluation eval = parser.parse("define test = [{'v: 1}, {'v: 2}]; (test + {})['v]");
 
         assertThat(eval.getExpressions()).hasSize(1);
         final Map<Integer, Double> result = eval.getExpressions()
@@ -169,7 +169,7 @@ public class VectorTest {
 
     @Test
     public void sumOfSymbolsAsDiceSides() {
-        final Evaluation eval = parser.parse("define die = ['a + 'b, 2'a, 2'b]; die{'a} > 0");
+        final Evaluation eval = parser.parse("define die = ['a + 'b, 2'a, 2'b]; die['a] > 0");
 
         assertThat(eval.getExpressions()).hasSize(1);
         final Map<Boolean, Double> result = eval.getExpressions()

@@ -323,7 +323,7 @@ public class CalculatorTest {
 
     @Test
     public void imperialAssaultTest() {
-        final List<Expression<?>> stmts = parser.parse("define green = ['s+'r,'s+'d+'r,2'd+'r,'s+'d+2'r,2'd+2'r,2'd+3'r]; let r <- green + green in r{'r} > 2 and r{'d} > 0").getExpressions();
+        final List<Expression<?>> stmts = parser.parse("define green = ['s+'r,'s+'d+'r,2'd+'r,'s+'d+2'r,2'd+2'r,2'd+3'r]; let r <- green + green in r['r] > 2 and r['d] > 0").getExpressions();
 
         final Map<Boolean, Double> result = stmts.get(0)
                                                  .calculateResults()

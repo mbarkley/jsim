@@ -33,7 +33,7 @@ diceSideDeclaration
 
 expression
     : LB expression RB
-    | expression LCB SYMBOL RCB
+    | expression LSB SYMBOL RSB
     | expression DIVIDE expression
     | expression TIMES expression
     | expression (PLUS|MINUS) expression

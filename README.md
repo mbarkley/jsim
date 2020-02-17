@@ -137,7 +137,7 @@ For example, if I want to find the odds of getting exactly one `'heads` in three
     ```
 * Component Value Access
     ```
-    (coin + coin + coin){'heads} = 1
+    (coin + coin + coin)['heads] = 1
     ```
 
 #### Let Statements
