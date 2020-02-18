@@ -12,6 +12,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import static ca.mbarkley.jsim.model.Types.*;
+import static java.lang.String.format;
 
 public abstract class ExpressionConverter<S extends Comparable<S>, T extends Comparable<T>> {
 
@@ -34,6 +35,9 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
     public interface ValueConverter<S extends Comparable<S>, T extends Comparable<T>> {
         T convert(S value);
         Type<T> getTargetType();
+        default String toString(String expressionString) {
+            return expressionString;
+        }
     }
 
     public abstract Expression<T> convert(Expression<S> expression, Type<T> targetType);
@@ -65,6 +69,11 @@ public abstract class ExpressionConverter<S extends Comparable<S>, T extends Com
         @Override
         public Type<T> getTargetType() {
             return componentType;
+        }
+
+        @Override
+        public String toString(String expressionString) {
+            return format("%s[%s]", expressionString, symbol);
         }
     }
 

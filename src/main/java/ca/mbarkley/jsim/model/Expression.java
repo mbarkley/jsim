@@ -217,8 +217,7 @@ public abstract class Expression<T extends Comparable<T>> {
 
         @Override
         public String toString() {
-            // FIXME there must be something better to do here?
-            return expression.toString();
+            return mapper.toString(expression.toString());
         }
     }
 
