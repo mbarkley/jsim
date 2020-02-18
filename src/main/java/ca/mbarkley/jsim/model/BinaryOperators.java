@@ -23,6 +23,7 @@ public abstract class BinaryOperators {
     public static final BinaryOperator<Integer, Integer> intSubtraction = BinaryOperator.create(Types.INTEGER_TYPE, "-", (l, r) -> l-r);
     public static final BinaryOperator<Integer, Integer> multiplication = BinaryOperator.create(Types.INTEGER_TYPE,"*", (l, r) -> l*r);
     public static final BinaryOperator<Integer, Integer> division = BinaryOperator.create(Types.INTEGER_TYPE, "/", (l, r) -> l/r);
+    public static final BinaryOperator<Integer, Integer> mod = BinaryOperator.create(Types.INTEGER_TYPE, "%", (l, r) -> l%r);
 
     @SuppressWarnings("unchecked")
     public static <T extends Comparable<T>> Optional<? extends BinaryOperator<T, T>> lookupBinaryOp(Type<?> left, Type<?> right, String rawSymbol) {
@@ -41,6 +42,11 @@ public abstract class BinaryOperators {
                         return (Optional) Optional.of(division);
                     }
                     break;
+                case "%":
+                    if (Types.INTEGER_TYPE.equals(operandType)) {
+                        return (Optional) Optional.of(mod);
+                    }
+                    break;
                 case "+":
                 case "-":
                     if (Types.INTEGER_TYPE.equals(operandType)) {
@@ -56,11 +62,13 @@ public abstract class BinaryOperators {
                     if (Types.INTEGER_TYPE.equals(operandType)) {
                         return (Optional) IntegerComparisons.lookup(symbol);
                     }
+                    break;
                 case "and":
                 case "or":
                     if (Types.BOOLEAN_TYPE.equals(operandType)) {
                         return (Optional) BooleanOperators.lookup(symbol);
                     }
+                    break;
             }
 
             return Optional.empty();

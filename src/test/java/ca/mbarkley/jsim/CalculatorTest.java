@@ -207,8 +207,8 @@ public class CalculatorTest {
                                                       .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
 
         final Offset<Double> offset = offset(0.00001);
-        assertThat(result).hasEntrySatisfying(0, prob -> assertThat(prob).isCloseTo(1.0, offset))
-                          .containsOnlyKeys(0);
+        assertThat(result).hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(1.0, offset))
+                          .hasSize(1);
     }
 
     @Test
@@ -224,6 +224,22 @@ public class CalculatorTest {
         final Offset<Double> offset = offset(0.00001);
         assertThat(result).hasEntrySatisfying(30, prob -> assertThat(prob).isCloseTo(1.0, offset))
                           .containsOnlyKeys(30);
+    }
+
+    @Test
+    public void mod() {
+        final List<Expression<?>> stmts = parser.parse("d6 % 2").getExpressions();
+
+        final Map<Integer, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Integer) e.getKey(), e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(0, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasEntrySatisfying(1, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasSize(2);
     }
 
     @Test

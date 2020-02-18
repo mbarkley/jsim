@@ -22,6 +22,8 @@ TIMES : '*';
 
 DIVIDE : '/';
 
+MOD : '%';
+
 PLUS : '+';
 
 MINUS : '-';
