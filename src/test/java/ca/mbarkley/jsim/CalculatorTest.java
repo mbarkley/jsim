@@ -323,8 +323,7 @@ public class CalculatorTest {
 
     @Test
     public void complexLetExpression() {
-        // Want to do modulo operator for this use-case but isn't implemented yet
-        final List<Expression<?>> stmts = parser.parse("let x <- 2d6 in x > 10 and x / 2 * 2 = x").getExpressions();
+        final List<Expression<?>> stmts = parser.parse("let x <- 2d6 in x > 10 and x % 2 = 0").getExpressions();
 
         final Map<Boolean, Double> result = stmts.get(0)
                                                  .calculateResults()
