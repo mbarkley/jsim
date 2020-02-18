@@ -8,7 +8,6 @@ import org.apache.commons.io.IOUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 
 public class BatchProcessor {
     private final int desiredWidth;
@@ -18,7 +17,7 @@ public class BatchProcessor {
     public BatchProcessor(int desiredWidth) {
         this.desiredWidth = desiredWidth;
         parser = new Parser();
-        displayer = new Displayer(desiredWidth);
+        displayer = new Displayer(() -> desiredWidth);
     }
 
     public void process(String input) {

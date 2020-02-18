@@ -1,16 +1,19 @@
 package ca.mbarkley.jsim;
 
 import ca.mbarkley.jsim.cli.BatchProcessor;
-import ca.mbarkley.jsim.cli.ConsoleProcessor;
+import ca.mbarkley.jsim.cli.TerminalProcessor;
 import org.apache.commons.cli.*;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 import java.io.Console;
+import java.io.IOException;
 
 public class Main {
 
     public static final int DESIRED_WIDTH = 120;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         try {
             final CommandLine commandLine = parseCommandLine(args);
 
@@ -24,7 +27,10 @@ public class Main {
             } else {
                 final Console console = System.console();
                 if (console != null) {
-                    new ConsoleProcessor(DESIRED_WIDTH).process(console);
+                    new TerminalProcessor().process(TerminalBuilder.builder()
+                                                                   .name("jsim")
+                                                                   .jna(true)
+                                                                   .build());
                 } else {
                     new BatchProcessor(DESIRED_WIDTH).process(System.in);
                 }

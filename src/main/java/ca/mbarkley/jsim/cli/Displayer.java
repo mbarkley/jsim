@@ -6,15 +6,17 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.IntSupplier;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
+import static java.lang.String.format;
 import static java.util.Comparator.*;
 import static java.util.stream.Collectors.toList;
 
 @RequiredArgsConstructor
 public class Displayer {
-    private final int desiredWidth;
+    private final IntSupplier desiredWidth;
 
     public <T extends Comparable<T>> String createSortedHistogram(String title, Stream<Event<T>> events) {
         return createSortedHistogram(title, events, comparing(Event::getValue, naturalOrder()));
@@ -39,15 +41,15 @@ public class Displayer {
                                                        .get();
             final int totalLeftPad = longestValueString + 1;
 
-            final int minRightPadding = 5;
-            final double charFactor = (desiredWidth - (double) totalLeftPad - "|".length() - minRightPadding) / highestLikelihood;
+            final int rightPadding = "100.00%".length();
+            final int desiredWidth = this.desiredWidth.getAsInt();
+            final double charFactor = (double) (desiredWidth - totalLeftPad - "|".length() - rightPadding - " ".length()) / highestLikelihood;
 
-            final int largestPrintedCharLength = sortedEvents.stream()
-                                                             .map(Event::getProbability)
-                                                             .mapToInt(p -> charCount(charFactor, p))
-                                                             .max()
-                                                             .getAsInt();
-            final int totalGraphSectionWidth = largestPrintedCharLength + minRightPadding;
+            final int largestPrintedCharLength = charCount(charFactor, highestLikelihood);
+            final int totalGraphSectionWidth = largestPrintedCharLength + rightPadding + " ".length();
+
+            final int largestCalculatedWidth = totalGraphSectionWidth + totalLeftPad + "|".length();
+            assert largestCalculatedWidth <= desiredWidth : format("total graph width with padding [%d] is larger than desired width [%d]", largestCalculatedWidth, desiredWidth);
 
             final StringBuilder sb = new StringBuilder();
 
@@ -66,12 +68,13 @@ public class Displayer {
                 final double probability = event.getProbability();
                 final int charCount = charCount(charFactor, probability);
                 final String value = event.getValue().toString();
+                final String formattedProb = FormatUtils.formatAsPercentage(probability);
                 sb.append(value)
                   .append(" ".repeat(totalLeftPad - value.length()))
                   .append('|')
                   .append("*".repeat(max(0, charCount)))
-                  .append(" ".repeat(totalGraphSectionWidth - charCount))
-                  .append(FormatUtils.formatAsPercentage(probability))
+                  .append(" ".repeat(totalGraphSectionWidth - charCount - formattedProb.length()))
+                  .append(formattedProb)
                   .append('\n');
             }
 
