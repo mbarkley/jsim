@@ -59,6 +59,8 @@ public abstract class BinaryOperators {
                     return (Optional) Optional.of(BinaryOperator.strictEquality());
                 case "<":
                 case ">":
+                case "<=":
+                case ">=":
                     if (Types.INTEGER_TYPE.equals(operandType)) {
                         return (Optional) IntegerComparisons.lookup(symbol);
                     }

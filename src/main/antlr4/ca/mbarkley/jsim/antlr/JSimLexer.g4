@@ -49,6 +49,10 @@ LT : '<';
 
 GT : '>';
 
+LTE : '<=';
+
+GTE : '>=';
+
 EQ : '=';
 
 // Boolean operators

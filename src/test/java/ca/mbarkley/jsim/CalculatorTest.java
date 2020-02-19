@@ -243,6 +243,38 @@ public class CalculatorTest {
     }
 
     @Test
+    public void lessThanOrEqualTo() {
+        final List<Expression<?>> stmts = parser.parse("d6 <= 3").getExpressions();
+
+        final Map<Boolean, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasSize(2);
+    }
+
+    @Test
+    public void greaterThanOrEqualTo() {
+        final List<Expression<?>> stmts = parser.parse("d6 >= 4").getExpressions();
+
+        final Map<Boolean, Double> result = stmts.get(0)
+                                                 .calculateResults()
+                                                 .entrySet()
+                                                 .stream()
+                                                 .collect(toMap(e -> (Boolean) e.getKey(), e -> e.getValue().getProbability()));
+
+        final Offset<Double> offset = offset(0.00001);
+        assertThat(result).hasEntrySatisfying(true, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasEntrySatisfying(false, prob -> assertThat(prob).isCloseTo(1.0/2.0, offset))
+                          .hasSize(2);
+    }
+
+    @Test
     public void disjunctive() {
         final List<Expression<?>> stmts = parser.parse("d6 = 1 or d6 = 2").getExpressions();
 
@@ -307,7 +339,6 @@ public class CalculatorTest {
 
     @Test
     public void simpleLetExpression() {
-        // Want to do modulo operator for this use-case but isn't implemented yet
         final List<Expression<?>> stmts = parser.parse("let x <- 1d4 in x > 2").getExpressions();
 
         final Map<Boolean, Double> result = stmts.get(0)

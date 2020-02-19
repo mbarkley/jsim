@@ -27,9 +27,11 @@ public abstract class BooleanExpression extends Expression<Boolean> {
         public static final BinaryOperator<Integer, Boolean> eq = BinaryOperator.strictEquality();
         public static final BinaryOperator<Integer, Boolean> lessThan = BinaryOperator.create(Types.BOOLEAN_TYPE, "<", (l, r) -> l < r);
         public static final BinaryOperator<Integer, Boolean> greaterThan = BinaryOperator.create(Types.BOOLEAN_TYPE, ">", (l, r) -> l > r);
+        public static final BinaryOperator<Integer, Boolean> lessThanOrEqualTo = BinaryOperator.create(Types.BOOLEAN_TYPE, "<=", (l, r) -> l <= r);
+        public static final BinaryOperator<Integer, Boolean> greaterThanOrEqualTo = BinaryOperator.create(Types.BOOLEAN_TYPE, ">=", (l, r) -> l >= r);
 
         public static Optional<BinaryOperator<Integer, Boolean>> lookup(String symbol) {
-            return HasSymbol.lookup(symbol, List.of(eq, lessThan, greaterThan));
+            return HasSymbol.lookup(symbol, List.of(eq, lessThan, greaterThan, lessThanOrEqualTo, greaterThanOrEqualTo));
         }
     }
 }

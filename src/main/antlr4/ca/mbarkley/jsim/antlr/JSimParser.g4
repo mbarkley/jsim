@@ -36,7 +36,7 @@ expression
     | expression LSB SYMBOL RSB
     | expression (TIMES|DIVIDE|MOD) expression
     | expression (PLUS|MINUS) expression
-    | expression (LT|GT|EQ) expression
+    | expression (LT|GT|LTE|GTE|EQ) expression
     | expression AND expression
     | expression OR expression
     | letExpression
